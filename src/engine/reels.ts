@@ -2,9 +2,10 @@ import { GAME_CONFIG, REEL_STRIPS, type SymbolId } from '../config/gameConfig';
 import type { Grid } from './types';
 import type { SeededRng } from './rng';
 
+/** Idle preview grid from strip heads (not used for wager math). */
 export function emptyGrid(): Grid {
-  return Array.from({ length: GAME_CONFIG.reels }, () =>
-    Array.from({ length: GAME_CONFIG.rows }, () => 'JACK' as SymbolId),
+  return REEL_STRIPS.map((strip) =>
+    Array.from({ length: GAME_CONFIG.rows }, (_, row) => strip[row % strip.length]!),
   );
 }
 
