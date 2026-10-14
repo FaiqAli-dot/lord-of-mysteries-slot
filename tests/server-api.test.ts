@@ -125,11 +125,13 @@ describe('server API', () => {
       headers: {
         Origin: 'https://faiqali-dot.github.io',
         'Access-Control-Request-Method': 'POST',
-        'Access-Control-Request-Headers': 'content-type,bypass-tunnel-reminder',
+        'Access-Control-Request-Headers':
+          'content-type,bypass-tunnel-reminder,ngrok-skip-browser-warning',
       },
     });
     expect(preflight.status).toBe(204);
     const allowHeaders = (preflight.headers.get('access-control-allow-headers') ?? '').toLowerCase();
     expect(allowHeaders).toContain('bypass-tunnel-reminder');
+    expect(allowHeaders).toContain('ngrok-skip-browser-warning');
   });
 });

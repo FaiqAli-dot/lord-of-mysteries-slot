@@ -66,7 +66,8 @@ export function resolveApiBase(): string {
 
 /**
  * Extra request headers for public HTTPS tunnels that show an interstitial
- * (e.g. localtunnel / loca.lt requires Bypass-Tunnel-Reminder).
+ * (e.g. localtunnel / loca.lt requires Bypass-Tunnel-Reminder;
+ * ngrok free tier requires ngrok-skip-browser-warning).
  */
 export function tunnelRequestHeaders(apiBase: string): Record<string, string> {
   if (!apiBase) return {};
@@ -79,6 +80,14 @@ export function tunnelRequestHeaders(apiBase: string): Record<string, string> {
       host.endsWith('.localtunnel.me')
     ) {
       return { 'Bypass-Tunnel-Reminder': 'true' };
+    }
+    if (
+      host.endsWith('.ngrok-free.app') ||
+      host.endsWith('.ngrok-free.dev') ||
+      host.endsWith('.ngrok.app') ||
+      host.endsWith('.ngrok.io')
+    ) {
+      return { 'ngrok-skip-browser-warning': 'true' };
     }
   } catch {
     /* ignore invalid URL */
