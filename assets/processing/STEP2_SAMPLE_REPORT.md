@@ -89,11 +89,11 @@ After asset approval, game UI/UX should mirror [space-fortune-client](https://gi
 
 **Could not access** `https://github.com/FaiqAli-dot/space-fortune-client` from this environment:
 
-- GitHub API: HTTP 404
-- `git ls-remote`: unavailable / not found
+- GitHub API / HTTPS / `git ls-remote`: HTTP 404 / repository not found
+- Not listed among `FaiqAli-dot` public repos visible to this token
 - No local checkout or `*fortune*` files in this workspace
 - No `ui-plugin` references in the current `lord-of-mysteries-slot` tree
-- npm registry probes for a generic `ui-plugin` package were inconclusive without the reference lockfile
+- Public npm has an unrelated old `ui-plugin@3.0.0-alpha.5` (skidding); `@cursor/ui-plugin` 404 — **cannot** assume that is the slot UI dependency without the reference lockfile
 
 **Needed from owner for Step 4:** repo access (make public, grant the agent/token, or attach a zip/submodule), plus confirmation whether `ui-plugin` is npm, git dependency, or vendored. Until then, layout/wiring details cannot be verified here.
 
