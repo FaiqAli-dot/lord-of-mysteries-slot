@@ -66,9 +66,9 @@ function corsHeaders(origin: string | null): Record<string, string> {
   const origins = allowedOrigins();
   const headers: Record<string, string> = {
     'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
-    // Include localtunnel interstitial bypass so Pages → tunnel API preflight succeeds.
+    // Tunnel interstitial bypass headers so Pages → tunnel API preflight succeeds.
     'Access-Control-Allow-Headers':
-      'Content-Type, Accept, Bypass-Tunnel-Reminder, bypass-tunnel-reminder',
+      'Content-Type, Accept, Bypass-Tunnel-Reminder, bypass-tunnel-reminder, ngrok-skip-browser-warning',
     'Access-Control-Max-Age': '86400',
     Vary: 'Origin',
   };
