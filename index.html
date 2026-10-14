@@ -12,6 +12,53 @@
   </head>
   <body>
     <div id="app"></div>
+    <!-- Ninja / Space Fortune-style ui-plugin loader. Base is configurable for GitHub Pages. -->
+    <script>
+      (function () {
+        var REMOTE = __VITE_UI_PLUGIN_REMOTE__;
+        var LOCAL = __VITE_UI_PLUGIN_LOCAL__;
+        var isLocalhost = ['localhost', '127.0.0.1', '0.0.0.0', '::1'].indexOf(location.hostname) !== -1;
+        // On Pages, location.origin + '/ui-plugin/' does not exist — prefer REMOTE (or VITE_UI_PLUGIN_URL).
+        var base = REMOTE || (isLocalhost ? 'https://demo.ninjagaming.com/ui-plugin/' : REMOTE);
+        if (!base) base = 'https://demo.ninjagaming.com/ui-plugin/';
+
+        function withSlash(u) {
+          return u.charAt(u.length - 1) === '/' ? u : u + '/';
+        }
+        base = withSlash(base);
+        LOCAL = withSlash(LOCAL || (location.pathname.replace(/\/[^/]*$/, '/') + 'ui-plugin/'));
+
+        window.__UI_PLUGIN_BASE__ = base;
+        window.__GAME_UI_BASE__ = base.replace(/\/$/, '');
+
+        function appendCss(href) {
+          var l = document.createElement('link');
+          l.rel = 'stylesheet';
+          l.href = href;
+          document.head.appendChild(l);
+          return l;
+        }
+        function appendJs(src, onError) {
+          var sc = document.createElement('script');
+          sc.src = src;
+          sc.defer = true;
+          if (onError) sc.onerror = onError;
+          document.body.appendChild(sc);
+          return sc;
+        }
+
+        var cssLink = appendCss(base + 'game-ui.css');
+        appendJs(base + 'game-ui.js', function () {
+          console.warn('[ui-plugin] remote load failed, falling back to vendored copy at', LOCAL);
+          base = LOCAL;
+          window.__UI_PLUGIN_BASE__ = base;
+          window.__GAME_UI_BASE__ = base.replace(/\/$/, '');
+          if (cssLink && cssLink.parentNode) cssLink.parentNode.removeChild(cssLink);
+          appendCss(base + 'game-ui.css');
+          appendJs(base + 'game-ui.js');
+        });
+      })();
+    </script>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>
