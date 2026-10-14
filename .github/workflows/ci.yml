@@ -25,7 +25,7 @@ jobs:
       - name: Unit & API tests
         run: npm test
       - name: Seeded RTP smoke (20k spins)
-        run: npx tsx scripts/simulate.ts --spins 20000 --seed 7
+        run: npm run simulate:smoke
       - name: Build frontend (Pages base path)
         env:
           VITE_BASE: /lord-of-mysteries-slot/

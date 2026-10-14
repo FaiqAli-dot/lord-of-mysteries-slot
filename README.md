@@ -101,6 +101,8 @@ Env: `PORT` (default 8787), `CORS_ORIGINS` (extra origins; Pages + localhost are
 
 Frontend API URL resolution: `?api=` (saved to localStorage) → Settings → `VITE_API_BASE`. Empty = client-side.
 
+When `?api=` points at a **localtunnel** / `*.loca.lt` URL, the client automatically sends the `Bypass-Tunnel-Reminder: true` header (and the API CORS allowlist permits that header on preflight).
+
 ## Features
 
 Fool’s Mirror wilds · Pathway Gate scatters (3–4 choice / 5+ Fool’s Miracles) · Sequence (≤15×) · Spirituality effects · Tarot Club / Crimson Moon / Fool’s Miracles · paytable/help/settings.

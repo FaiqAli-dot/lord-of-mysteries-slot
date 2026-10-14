@@ -1,6 +1,6 @@
 import type { BonusModeId } from '../config/gameConfig';
 import type { PublicGameState } from './publicState';
-import { resolveApiBase, SESSION_STORAGE_KEY } from './apiConfig';
+import { resolveApiBase, SESSION_STORAGE_KEY, tunnelRequestHeaders } from './apiConfig';
 
 export class ApiError extends Error {
   constructor(
@@ -38,6 +38,7 @@ async function request<T>(
       headers: {
         Accept: 'application/json',
         ...(init?.body ? { 'Content-Type': 'application/json' } : {}),
+        ...tunnelRequestHeaders(base),
         ...init?.headers,
       },
     });
