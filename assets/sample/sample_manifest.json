@@ -1,0 +1,105 @@
+{
+  "config": "assets/processing/crops.sample.json",
+  "assets": [
+    {
+      "id": "hv_hanged_man",
+      "path": "assets/sample/png/hv_hanged_man.png",
+      "size": [
+        223,
+        248
+      ],
+      "mode": "RGBA",
+      "transparency": true,
+      "matte_method": "color_distance_soft",
+      "crop": [
+        6,
+        260,
+        223,
+        248
+      ],
+      "source": "assets/source/04_high_value_icons_sheet.jpg",
+      "identity": "Hanged Man\u2013like inverted figure pendant (chains + red aura)",
+      "review_status": "needs_review"
+    },
+    {
+      "id": "low_ace",
+      "path": "assets/sample/png/low_ace.png",
+      "size": [
+        219,
+        236
+      ],
+      "mode": "RGBA",
+      "transparency": true,
+      "matte_method": "color_distance_soft",
+      "crop": [
+        8,
+        12,
+        219,
+        236
+      ],
+      "source": "assets/source/03_labeled_symbols_sheet.jpg",
+      "identity": "A (Ace)",
+      "review_status": "ok"
+    },
+    {
+      "id": "wild_basic",
+      "path": "assets/sample/png/wild_basic.png",
+      "size": [
+        219,
+        236
+      ],
+      "mode": "RGBA",
+      "transparency": true,
+      "matte_method": "color_distance_soft",
+      "crop": [
+        1181,
+        12,
+        219,
+        236
+      ],
+      "source": "assets/source/03_labeled_symbols_sheet.jpg",
+      "identity": "WILD (basic gold medallion)",
+      "review_status": "ok"
+    },
+    {
+      "id": "scatter_wax_seal",
+      "path": "assets/sample/png/scatter_wax_seal.png",
+      "size": [
+        223,
+        212
+      ],
+      "mode": "RGBA",
+      "transparency": true,
+      "matte_method": "color_distance_soft",
+      "crop": [
+        475,
+        260,
+        223,
+        212
+      ],
+      "source": "assets/source/03_labeled_symbols_sheet.jpg",
+      "identity": "SCATTER (red wax seal)",
+      "review_status": "ok"
+    },
+    {
+      "id": "bg_gothic_library",
+      "path": "assets/sample/png/bg_gothic_library.png",
+      "size": [
+        1376,
+        768
+      ],
+      "mode": "RGBA",
+      "transparency": false,
+      "matte_method": "opaque_passthrough",
+      "crop": [
+        0,
+        0,
+        1376,
+        768
+      ],
+      "source": "assets/source/02_library_background.jpg",
+      "identity": "Moonlit gothic library background",
+      "review_status": "ok"
+    }
+  ]
+}
