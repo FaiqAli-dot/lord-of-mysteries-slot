@@ -1,0 +1,22 @@
+# Optional Render Blueprint for the API (alternative to Fly.io).
+# GitHub Pages still only hosts the static frontend.
+#
+# Owner steps:
+#   1. https://dashboard.render.com → New → Blueprint → connect this repo
+#   2. After deploy, copy the service URL
+#   3. Set GitHub Actions variable VITE_API_BASE to that URL (or use ?api= at runtime)
+#   4. Ensure CORS already allows https://faiqali-dot.github.io (built-in)
+
+services:
+  - type: web
+    name: pathways-of-the-sealed-api
+    runtime: node
+    plan: free
+    buildCommand: npm ci
+    startCommand: npm run server
+    healthCheckPath: /health
+    envVars:
+      - key: PORT
+        value: "8787"
+      - key: NODE_VERSION
+        value: "22"

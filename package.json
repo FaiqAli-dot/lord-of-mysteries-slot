@@ -1,0 +1,27 @@
+{
+  "name": "pathways-of-the-sealed",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "A gothic occult 5x4 video slot — Pathways of the Sealed (demo credits only)",
+  "scripts": {
+    "dev": "VITE_BASE=/ vite",
+    "build": "tsc && vite build",
+    "preview": "VITE_BASE=/ vite preview",
+    "server": "tsx server/index.ts",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "simulate": "tsx scripts/simulate.ts",
+    "simulate:quick": "tsx scripts/simulate.ts --spins 100000",
+    "simulate:smoke": "tsx scripts/simulate.ts --spins 20000 --seed 7",
+    "typecheck": "tsc --noEmit",
+    "ci": "npm run typecheck && npm test && npm run simulate:smoke && VITE_BASE=/lord-of-mysteries-slot/ npm run build"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.5",
+    "tsx": "^4.19.2",
+    "typescript": "~5.7.2",
+    "vite": "^6.0.7",
+    "vitest": "^2.1.8"
+  }
+}

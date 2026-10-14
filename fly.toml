@@ -1,0 +1,38 @@
+# Fly.io app config for the optional authoritative API.
+# GitHub Pages serves only the static frontend; this process is separate.
+#
+# One-time setup (owner):
+#   1. Install flyctl and `fly auth login`
+#   2. `fly apps create pathways-of-the-sealed-api` (or edit app name below)
+#   3. Add repo secret FLY_API_TOKEN (fly tokens create deploy)
+#   4. Optionally set GitHub Actions variable VITE_API_BASE to https://<app>.fly.dev
+#
+# Manual deploy: fly deploy
+
+app = "pathways-of-the-sealed-api"
+primary_region = "iad"
+
+[build]
+
+[env]
+  PORT = "8787"
+
+[http_service]
+  internal_port = 8787
+  force_https = true
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  min_machines_running = 0
+  processes = ["app"]
+
+  [[http_service.checks]]
+    interval = "30s"
+    timeout = "5s"
+    grace_period = "10s"
+    method = "GET"
+    path = "/health"
+
+[[vm]]
+  memory = "256mb"
+  cpu_kind = "shared"
+  cpus = 1

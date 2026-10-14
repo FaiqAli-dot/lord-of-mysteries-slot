@@ -1,0 +1,33 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main, 'cursor/**']
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Tests + RTP smoke
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Unit & API tests
+        run: npm test
+      - name: Seeded RTP smoke (20k spins)
+        run: npx tsx scripts/simulate.ts --spins 20000 --seed 7
+      - name: Build frontend (Pages base path)
+        env:
+          VITE_BASE: /lord-of-mysteries-slot/
+          VITE_API_BASE: ${{ vars.VITE_API_BASE }}
+        run: npm run build
