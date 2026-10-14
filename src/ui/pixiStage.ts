@@ -14,7 +14,7 @@ import { GAME_CONFIG, type SymbolId } from '../config/gameConfig';
 import { sequenceProgress } from '../engine/sequence';
 import type { GameState } from '../engine/types';
 import { designSize, detectLayout, type LayoutKind } from './sizeConfig';
-import { playReelDrop, type DropMode } from './reelDrop';
+import { playReelDrop, REEL_DROP, type DropMode } from './reelDrop';
 
 const SYMBOL_PATH: Record<SymbolId, string> = {
   FOOL: 'symbols/high/hv_icon_r3c6_star.png',
@@ -39,23 +39,51 @@ function assetUrl(rel: string): string {
   return `${base}game-assets/${rel.replace(/^\//, '')}`;
 }
 
+/** Desktop cells from reelDrop.json — SF pitch = width/height + indent. */
+const DROP_SYM = REEL_DROP.layout.reels.symbols;
+const DESKTOP_REEL = {
+  x: 1024,
+  y: 470,
+  cellW: DROP_SYM.width,
+  cellH: DROP_SYM.height,
+  gapX: DROP_SYM.indent,
+  gapY: DROP_SYM.indent,
+  scale: 1,
+} as const;
+
 /** 5×4 layout tuned so reels sit above plugin chrome (bottom ~12–15%). */
 const LAYOUT = {
   desktop: {
     logo: { x: 1024, y: 72, fontSize: 42 },
-    reel: { x: 1024, y: 470, cellW: 168, cellH: 132, gapX: 10, gapY: 8, scale: 1 },
+    reel: DESKTOP_REEL,
     seqMeter: { x: 210, y: 200, w: 52, h: 520 },
     spiritMeter: { x: 1838, y: 200, w: 52, h: 520 },
   },
   landscape: {
     logo: { x: 1024, y: 64, fontSize: 38 },
-    reel: { x: 1024, y: 460, cellW: 160, cellH: 126, gapX: 8, gapY: 6, scale: 0.95 },
+    reel: {
+      x: 1024,
+      y: 460,
+      cellW: Math.round(DESKTOP_REEL.cellW * 0.91),
+      cellH: Math.round(DESKTOP_REEL.cellH * 0.91),
+      gapX: 2,
+      gapY: 2,
+      scale: 0.95,
+    },
     seqMeter: { x: 180, y: 180, w: 48, h: 500 },
     spiritMeter: { x: 1868, y: 180, w: 48, h: 500 },
   },
   portrait: {
     logo: { x: 540, y: 56, fontSize: 30 },
-    reel: { x: 540, y: 430, cellW: 150, cellH: 118, gapX: 8, gapY: 6, scale: 0.92 },
+    reel: {
+      x: 540,
+      y: 430,
+      cellW: Math.round(DESKTOP_REEL.cellW * 0.85),
+      cellH: Math.round(DESKTOP_REEL.cellH * 0.85),
+      gapX: 2,
+      gapY: 2,
+      scale: 0.92,
+    },
     seqMeter: { x: 48, y: 160, w: 40, h: 420 },
     spiritMeter: { x: 992, y: 160, w: 40, h: 420 },
   },
@@ -93,6 +121,7 @@ export class PixiStage {
 
   private logo!: Text;
   private reelFrame!: Graphics;
+  private reelMask = new Graphics();
   private cells: Sprite[][] = [];
   private cellHome: { x: number; y: number }[][] = [];
   private cellStepH = 140;
@@ -168,6 +197,8 @@ export class PixiStage {
 
     this.reelFrame = new Graphics();
     this.reelLayer.addChild(this.reelFrame);
+    this.reelMask.alpha = 0; // SF reelsMask: clip only, not visible
+    this.reelLayer.addChild(this.reelMask);
     for (let r = 0; r < GAME_CONFIG.reels; r++) {
       this.cells[r] = [];
       for (let row = 0; row < GAME_CONFIG.rows; row++) {
@@ -344,6 +375,12 @@ export class PixiStage {
     this.reelFrame.drawRoundedRect(ox - 16, oy - 16, gridW * scale + 32, gridH * scale + 32, 12);
     this.reelFrame.endFill();
 
+    // Clip symbols while falling above/below the visible window (SF reelsMask).
+    this.reelMask.clear();
+    this.reelMask.beginFill(0xffffff);
+    this.reelMask.drawRect(ox - 8, oy - 8, gridW * scale + 16, gridH * scale + 16);
+    this.reelMask.endFill();
+
     this.cellStepH = (cellH + gapY) * scale;
     this.cellHome = [];
     for (let r = 0; r < GAME_CONFIG.reels; r++) {
@@ -403,9 +440,24 @@ export class PixiStage {
     }
   }
 
+  private setColumnTextures(grid: SymbolId[][], reel: number): void {
+    const L = LAYOUT[this.layoutKind].reel;
+    for (let row = 0; row < GAME_CONFIG.rows; row++) {
+      const id = grid[reel]?.[row];
+      if (!id) continue;
+      const s = this.cells[reel]?.[row];
+      if (!s) continue;
+      s.texture = Texture.from(assetUrl(SYMBOL_PATH[id]));
+      this.fitCell(s, L.cellW * L.scale * 0.9, L.cellH * L.scale * 0.9);
+    }
+  }
+
+  private setReelMask(enabled: boolean): void {
+    this.reelLayer.mask = enabled ? this.reelMask : null;
+  }
+
   /**
-   * Falling/drop transition after spin result arrives (config-driven via reelDrop.json).
-   * Purely visual — `grid` is already the resolved outcome.
+   * Falling/drop after spin result (REEL_DROP_ANIMATION.md). Visual only.
    */
   async playDropToGrid(grid: SymbolId[][], mode: DropMode = 'normal'): Promise<void> {
     if (!this.cells.length) {
@@ -413,6 +465,7 @@ export class PixiStage {
       return;
     }
     this.dropping = true;
+    this.setReelMask(true);
     const cells: {
       sprite: Sprite;
       homeX: number;
@@ -427,14 +480,22 @@ export class PixiStage {
         cells.push({ sprite, homeX: home.x, homeY: home.y, reel: r, row });
       }
     }
-    await playReelDrop({
-      cells,
-      cellHeight: this.cellStepH,
-      mode,
-      reducedMotion: this.reducedMotion,
-      applyTextures: () => this.setGrid(grid),
-    });
-    this.dropping = false;
+    try {
+      await playReelDrop({
+        cells,
+        cellHeight: this.cellStepH,
+        rows: GAME_CONFIG.rows,
+        reels: GAME_CONFIG.reels,
+        mode,
+        reducedMotion: this.reducedMotion,
+        skipping: mode === 'slam',
+        applyColumnTextures: (reel) => this.setColumnTextures(grid, reel),
+      });
+    } finally {
+      this.setReelMask(false);
+      this.dropping = false;
+      this.setGrid(grid);
+    }
   }
 
   setMeters(state: GameState | null): void {
@@ -475,7 +536,8 @@ export class PixiStage {
   }
 
   dropModeForTurbo(turbo: 0 | 1 | 2, slam: boolean): DropMode {
-    if (slam || turbo >= 2) return 'turbo';
+    if (slam) return 'slam';
+    if (turbo >= 2) return 'turbo';
     if (turbo === 1) return 'quick';
     return 'normal';
   }

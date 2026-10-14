@@ -2,10 +2,10 @@ import gsap from 'gsap';
 import type { Sprite } from 'pixi.js';
 import reelDropConfig from './configs/reelDrop.json';
 
+/** Maps to SF UIState.spinSpeedLevel + slam. */
 export type DropMode = 'normal' | 'quick' | 'turbo' | 'slam';
 
 export type ReelDropConfig = typeof reelDropConfig;
-
 export const REEL_DROP: ReelDropConfig = reelDropConfig;
 
 export type DropCell = {
@@ -13,120 +13,176 @@ export type DropCell = {
   homeX: number;
   homeY: number;
   reel: number;
+  /** Row index: 0 = top */
   row: number;
 };
 
+/**
+ * SF ReelView cell pitch: symbolWidth/Height = size + indent.
+ * Fall distance Δy = rows * symbolHeight (one full grid).
+ */
+export function symbolPitch(cfg: ReelDropConfig = REEL_DROP): {
+  symbolWidth: number;
+  symbolHeight: number;
+  rows: number;
+  columns: number;
+} {
+  const reels = cfg.layout.reels;
+  const s = reels.symbols;
+  return {
+    symbolWidth: s.width + s.indent,
+    symbolHeight: s.height + s.indent,
+    rows: s.count,
+    columns: reels.count,
+  };
+}
+
+/** Row/column stagger delays (SF DropReelModification). */
+export function dropDelays(
+  mode: DropMode,
+  rows = REEL_DROP.layout.reels.symbols.count,
+  skipping = false,
+): {
+  fallOut: number;
+  fallIn: number;
+  delayOut: (col: number, row: number) => number;
+  delayIn: (row: number) => number;
+} {
+  const t = REEL_DROP.timings;
+  const skipDelays = shouldSkipDelays(mode) || skipping;
+  const fallOut = getSpinDuration(t.reelStartDuration, mode, skipping);
+  const fallIn = getSpinDuration(t.reelStopDuration, mode, skipping);
+  const dSymOut = (fallOut / rows) * t.reelStartSymbolsDelayCoefficient;
+  const dSymIn = (fallIn / rows) * t.reelStopSymbolsDelayCoefficient;
+  return {
+    fallOut,
+    fallIn,
+    delayOut: (col, row) => (skipDelays ? 0 : t.reelStartDelay * col + (rows - row) * dSymOut),
+    delayIn: (row) => (skipDelays ? 0 : (rows - row) * dSymIn),
+  };
+}
+
 function mapEase(ease: string): string {
-  // Config may say elastic(1,1); GSAP wants elastic.out(1,1)
-  if (ease.startsWith('elastic(')) return `elastic.out${ease.slice('elastic'.length)}`;
-  if (ease === 'elastic.out(1,1)') return ease;
+  // SF config uses "elastic(1,1)" → GSAP elastic.out(1, 1)
+  if (ease === 'elastic(1,1)' || (ease.startsWith('elastic(') && !ease.includes('.out'))) {
+    const inner = ease.replace(/^elastic\(/, '').replace(/\)$/, '');
+    return `elastic.out(${inner})`;
+  }
   return ease;
 }
 
+function speedLevel(mode: DropMode): 'normal' | 'fast' | 'very-fast' {
+  if (mode === 'turbo' || mode === 'slam') return 'very-fast';
+  if (mode === 'quick') return 'fast';
+  return 'normal';
+}
+
+/** SF DropReelModification.getSpinDuration */
+export function getSpinDuration(normalDuration: number, mode: DropMode, skipping = false): number {
+  const sp = REEL_DROP.speed;
+  if (skipping || mode === 'slam') return sp.skipDuration;
+  const level = speedLevel(mode);
+  if (level === 'very-fast') return Math.min(sp.veryFastDurationCap, normalDuration * sp.veryFastDurationScale);
+  if (level === 'fast') return Math.min(sp.fastDurationCap, normalDuration * sp.fastDurationScale);
+  return normalDuration;
+}
+
+export function shouldSkipDelays(mode: DropMode): boolean {
+  return mode === 'turbo' || mode === 'slam';
+}
+
 /**
- * Space Fortune–style drop-out / drop-in (visual only).
- * Timings come from `configs/reelDrop.json` so REEL_DROP_ANIMATION.md can retune without code churn.
+ * Per-column drop-out → texture swap → drop-in (SF Reelset.stopSpin Promise.all).
+ * Δy = rows * H (one full grid). No alpha/scale. Drop-in has no column stagger.
  */
 export function playReelDrop(opts: {
   cells: DropCell[];
+  /** Step between row centers (= symbolHeight). */
   cellHeight: number;
-  applyTextures: () => void;
+  rows?: number;
+  reels?: number;
+  /** Apply outcome textures for one column only (called after that column’s drop-out). */
+  applyColumnTextures: (reel: number) => void;
   mode?: DropMode;
   reducedMotion?: boolean;
+  skipping?: boolean;
 }): Promise<void> {
-  const { cells, cellHeight, applyTextures, mode = 'normal', reducedMotion = false } = opts;
-  const cfg = REEL_DROP;
+  const {
+    cells,
+    cellHeight: H,
+    applyColumnTextures,
+    mode = 'normal',
+    reducedMotion = false,
+    skipping = false,
+  } = opts;
+  const t = REEL_DROP.timings;
+  const R = opts.rows ?? REEL_DROP.layout.reels.symbols.count;
+  const C = opts.reels ?? REEL_DROP.layout.reels.count;
 
   for (const c of cells) gsap.killTweensOf(c.sprite);
 
   if (reducedMotion || cells.length === 0) {
-    for (const c of cells) {
-      c.sprite.position.set(c.homeX, c.homeY);
-      c.sprite.alpha = 1;
-    }
-    applyTextures();
+    for (let col = 0; col < C; col++) applyColumnTextures(col);
+    for (const c of cells) c.sprite.position.set(c.homeX, c.homeY);
     return Promise.resolve();
   }
 
-  const turbo = mode === 'turbo' || mode === 'slam';
-  const quick = mode === 'quick';
+  const { fallOut, fallIn, delayOut, delayIn } = dropDelays(mode, R, skipping);
+  // Prefer stage pitch when provided; else SF formula height+indent from config.
+  const pitchH = H > 0 ? H : symbolPitch().symbolHeight;
+  const gridFall = pitchH * R;
 
-  let outDur = cfg.dropOut.duration;
-  let inDur = cfg.dropIn.duration;
-  let colStagger = cfg.dropOut.staggerPerColumn;
-
-  if (quick && cfg.quickSpin.keepStagger) {
-    outDur *= cfg.quickSpin.durationScale;
-    inDur *= cfg.quickSpin.durationScale;
-  }
-  if (turbo && cfg.turboOrSlam.zeroStagger) {
-    colStagger = 0;
-    outDur = Math.min(outDur, cfg.turboOrSlam.clampDuration);
-    inDur = Math.min(inDur, cfg.turboOrSlam.clampDuration);
+  const byReel = new Map<number, DropCell[]>();
+  for (const c of cells) {
+    const list = byReel.get(c.reel) ?? [];
+    list.push(c);
+    byReel.set(c.reel, list);
   }
 
-  const dist = cellHeight * cfg.dropOut.distanceInCellHeights;
-  const rows = cfg.grid.rows;
+  const columnJobs: Promise<void>[] = [];
+  for (let col = 0; col < C; col++) {
+    const colCells = byReel.get(col);
+    if (!colCells?.length) continue;
 
-  // Stagger: bottom row first → top last; +staggerPerColumn per reel
-  const delayFor = (reel: number, row: number): number => {
-    const rowFromBottom = cfg.stagger.rowOrder === 'bottom-first' ? rows - 1 - row : row;
-    return reel * colStagger + rowFromBottom * colStagger * (cfg.stagger.rowStaggerScale ?? 1) * cfg.dropOut.coeff;
-  };
-  const delayIn = (reel: number, row: number): number => {
-    const rowFromBottom = cfg.stagger.rowOrder === 'bottom-first' ? rows - 1 - row : row;
-    return reel * colStagger + rowFromBottom * colStagger * (cfg.stagger.rowStaggerScale ?? 1) * cfg.dropIn.coeff;
-  };
+    columnJobs.push(
+      new Promise<void>((resolveCol) => {
+        const outTl = gsap.timeline({
+          onComplete: () => {
+            applyColumnTextures(col);
+            for (const c of colCells) {
+              c.sprite.y = c.homeY - gridFall;
+            }
+            const inTl = gsap.timeline({ onComplete: () => resolveCol() });
+            for (const c of colCells) {
+              inTl.fromTo(
+                c.sprite,
+                { y: c.homeY - gridFall },
+                {
+                  y: c.homeY,
+                  duration: fallIn,
+                  ease: mapEase(t.easeStop),
+                  delay: delayIn(c.row),
+                },
+                0,
+              );
+            }
+          },
+        });
 
-  return new Promise((resolve) => {
-    const tl = gsap.timeline({
-      onComplete: () => resolve(),
-    });
-
-    // Phase 1: drop out (fall one cell height down)
-    for (const c of cells) {
-      tl.to(
-        c.sprite,
-        {
-          y: c.homeY + dist,
-          alpha: 0,
-          duration: outDur,
-          ease: mapEase(cfg.dropOut.ease),
-        },
-        delayFor(c.reel, c.row),
-      );
-    }
-
-    // Swap textures at mid-point after longest drop-out
-    const outEnd =
-      outDur +
-      (cfg.grid.reels - 1) * colStagger +
-      (rows - 1) * colStagger * (cfg.dropOut.coeff || 0.5);
-    tl.call(
-      () => {
-        applyTextures();
-        for (const c of cells) {
-          c.sprite.y = c.homeY - dist;
-          c.sprite.alpha = 0;
+        for (const c of colCells) {
+          outTl.to(
+            c.sprite,
+            {
+              y: c.homeY + gridFall,
+              duration: fallOut,
+              ease: mapEase(t.easeStart),
+            },
+            delayOut(col, c.row),
+          );
         }
-      },
-      undefined,
-      Math.max(outDur, outEnd * 0.85),
+      }),
     );
+  }
 
-    // Phase 2: drop in from above
-    const inStart = Math.max(outDur, outEnd * 0.85);
-    for (const c of cells) {
-      tl.to(
-        c.sprite,
-        {
-          y: c.homeY,
-          alpha: 1,
-          duration: inDur,
-          ease: mapEase(cfg.dropIn.ease),
-        },
-        inStart + delayIn(c.reel, c.row),
-      );
-    }
-  });
+  return Promise.all(columnJobs).then(() => undefined);
 }

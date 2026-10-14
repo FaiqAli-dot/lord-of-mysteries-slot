@@ -1,33 +1,35 @@
 {
-  "_comment": "Space Fortune–style falling/drop reel timings. Visual only — no cascade/math. Tuned from REEL_DROP_ANIMATION.md when available.",
-  "grid": {
-    "reels": 5,
-    "rows": 4
+  "_comment": "Mirrors space-fortune timings.json + 5×4 port formulas from REEL_DROP_ANIMATION.md. Visual only.",
+  "reelType": "drop",
+  "layout": {
+    "reels": {
+      "count": 5,
+      "indent": 2,
+      "symbols": {
+        "count": 4,
+        "width": 176,
+        "height": 138,
+        "indent": 2
+      }
+    }
   },
-  "dropOut": {
-    "duration": 0.5,
-    "ease": "power2.in",
-    "coeff": 0.5,
-    "staggerPerColumn": 0.07,
-    "distanceInCellHeights": 1
+  "timings": {
+    "reelStartDuration": 0.5,
+    "reelStartSymbolsDelayCoefficient": 0.5,
+    "reelStartDelay": 0.07,
+    "easeStart": "power2.in",
+    "reelStopDuration": 0.8,
+    "reelStopSymbolsDelayCoefficient": 0.3,
+    "reelStopDelay": 0.07,
+    "easeStop": "elastic(1,1)",
+    "avalancheDuration": 1,
+    "easeAvalanche": "elastic(1,1)"
   },
-  "dropIn": {
-    "duration": 0.8,
-    "ease": "elastic.out(1,1)",
-    "coeff": 0.3,
-    "staggerPerColumn": 0.07,
-    "distanceInCellHeights": 1
-  },
-  "stagger": {
-    "rowOrder": "bottom-first",
-    "rowStaggerScale": 1
-  },
-  "quickSpin": {
-    "durationScale": 0.55,
-    "keepStagger": true
-  },
-  "turboOrSlam": {
-    "zeroStagger": true,
-    "clampDuration": 0.2
+  "speed": {
+    "fastDurationScale": 0.6,
+    "fastDurationCap": 0.4,
+    "veryFastDurationScale": 0.4,
+    "veryFastDurationCap": 0.2,
+    "skipDuration": 0.2
   }
 }
