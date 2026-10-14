@@ -1,0 +1,1157 @@
+{
+  "config": "assets/processing/crops.full.json",
+  "version": 2,
+  "count": 50,
+  "assets": [
+    {
+      "id": "low_ace",
+      "path": "assets/library/symbols/low/low_ace.png",
+      "category": "symbols/low",
+      "source": "assets/source/03_labeled_symbols_sheet.jpg",
+      "crop": [
+        0,
+        2,
+        278,
+        252
+      ],
+      "dims": [
+        278,
+        252
+      ],
+      "transparency": true,
+      "matte_method": "color_distance_soft",
+      "identity": "A (Ace)",
+      "suggested_identity": null,
+      "identity_confidence": "certain",
+      "review_status": "ok",
+      "notes": "Widened to cell gap; source smoke meets K-flame boundary ~x=281 so right edge is soft-faded."
+    },
+    {
+      "id": "low_king",
+      "path": "assets/library/symbols/low/low_king.png",
+      "category": "symbols/low",
+      "source": "assets/source/03_labeled_symbols_sheet.jpg",
+      "crop": [
+        241,
+        10,
+        222,
+        236
+      ],
+      "dims": [
+        222,
+        236
+      ],
+      "transparency": true,
+      "matte_method": "color_distance_soft",
+      "identity": "K (King)",
+      "suggested_identity": null,
+      "identity_confidence": "certain",
+      "review_status": "ok",
+      "notes": null
+    },
+    {
+      "id": "low_queen",
+      "path": "assets/library/symbols/low/low_queen.png",
+      "category": "symbols/low",
+      "source": "assets/source/03_labeled_symbols_sheet.jpg",
+      "crop": [
+        475,
+        10,
+        223,
+        236
+      ],
+      "dims": [
+        223,
+        236
+      ],
+      "transparency": true,
+      "matte_method": "color_distance_soft",
+      "identity": "Q (Queen)",
+      "suggested_identity": null,
+      "identity_confidence": "certain",
+      "review_status": "ok",
+      "notes": null
+    },
+    {
+      "id": "low_jack_swirl",
+      "path": "assets/library/symbols/low/low_jack_swirl.png",
+      "category": "symbols/low",
+      "source": "assets/source/03_labeled_symbols_sheet.jpg",
+      "crop": [
+        710,
+        10,
+        223,
+        236
+      ],
+      "dims": [
+        223,
+        236
+      ],
+      "transparency": true,
+      "matte_method": "color_distance_soft",
+      "identity": "J (circular green swirl)",
+      "suggested_identity": null,
+      "identity_confidence": "certain",
+      "review_status": "ok",
+      "notes": null
+    },
+    {
+      "id": "low_jack_crescent",
+      "path": "assets/library/symbols/low/low_jack_crescent.png",
+      "category": "symbols/low",
+      "source": "assets/source/03_labeled_symbols_sheet.jpg",
+      "crop": [
+        945,
+        10,
+        222,
+        236
+      ],
+      "dims": [
+        222,
+        236
+      ],
+      "transparency": true,
+      "matte_method": "color_distance_soft",
+      "identity": "J (crescent green swirl)",
+      "suggested_identity": null,
+      "identity_confidence": "certain",
+      "review_status": "ok",
+      "notes": null
+    },
+    {
+      "id": "wild_basic",
+      "path": "assets/library/symbols/wild/wild_basic.png",
+      "category": "symbols/wild",
+      "source": "assets/source/03_labeled_symbols_sheet.jpg",
+      "crop": [
+        1179,
+        10,
+        223,
+        236
+      ],
+      "dims": [
+        223,
+        236
+      ],
+      "transparency": true,
+      "matte_method": "color_distance_soft",
+      "identity": "WILD (basic gold medallion)",
+      "suggested_identity": null,
+      "identity_confidence": "certain",
+      "review_status": "ok",
+      "notes": null
+    },
+    {
+      "id": "wild_flaming",
+      "path": "assets/library/symbols/wild/wild_flaming.png",
+      "category": "symbols/wild",
+      "source": "assets/source/03_labeled_symbols_sheet.jpg",
+      "crop": [
+        6,
+        266,
+        223,
+        196
+      ],
+      "dims": [
+        223,
+        196
+      ],
+      "transparency": true,
+      "matte_method": "color_distance_soft",
+      "identity": "WILD (flaming purple type)",
+      "suggested_identity": null,
+      "identity_confidence": "certain",
+      "review_status": "ok",
+      "notes": null
+    },
+    {
+      "id": "wild_celestial",
+      "path": "assets/library/symbols/wild/wild_celestial.png",
+      "category": "symbols/wild",
+      "source": "assets/source/03_labeled_symbols_sheet.jpg",
+      "crop": [
+        241,
+        266,
+        222,
+        196
+      ],
+      "dims": [
+        222,
+        196
+      ],
+      "transparency": true,
+      "matte_method": "color_distance_soft",
+      "identity": "WILD (celestial compass)",
+      "suggested_identity": null,
+      "identity_confidence": "certain",
+      "review_status": "ok",
+      "notes": null
+    },
+    {
+      "id": "scatter_wax_seal",
+      "path": "assets/library/symbols/scatter/scatter_wax_seal.png",
+      "category": "symbols/scatter",
+      "source": "assets/source/03_labeled_symbols_sheet.jpg",
+      "crop": [
+        524,
+        255,
+        178,
+        196
+      ],
+      "dims": [
+        178,
+        196
+      ],
+      "transparency": true,
+      "matte_method": "color_distance_soft+cyan_kill",
+      "identity": "SCATTER (red wax seal)",
+      "suggested_identity": null,
+      "identity_confidence": "certain",
+      "review_status": "ok",
+      "notes": "Left crop tightened + left_edge teal mask to remove celestial WILD bleed."
+    },
+    {
+      "id": "feature_sequence",
+      "path": "assets/library/symbols/feature/feature_sequence.png",
+      "category": "symbols/feature",
+      "source": "assets/source/03_labeled_symbols_sheet.jpg",
+      "crop": [
+        710,
+        266,
+        223,
+        196
+      ],
+      "dims": [
+        223,
+        196
+      ],
+      "transparency": true,
+      "matte_method": "color_distance_soft",
+      "identity": "Sequence",
+      "suggested_identity": null,
+      "identity_confidence": "certain",
+      "review_status": "ok",
+      "notes": null
+    },
+    {
+      "id": "feature_creeping_hunger",
+      "path": "assets/library/symbols/feature/feature_creeping_hunger.png",
+      "category": "symbols/feature",
+      "source": "assets/source/03_labeled_symbols_sheet.jpg",
+      "crop": [
+        945,
+        266,
+        222,
+        196
+      ],
+      "dims": [
+        222,
+        196
+      ],
+      "transparency": true,
+      "matte_method": "color_distance_soft",
+      "identity": "Creeping Hunger",
+      "suggested_identity": null,
+      "identity_confidence": "certain",
+      "review_status": "ok",
+      "notes": null
+    },
+    {
+      "id": "wild_locked",
+      "path": "assets/library/symbols/wild/wild_locked.png",
+      "category": "symbols/wild",
+      "source": "assets/source/03_labeled_symbols_sheet.jpg",
+      "crop": [
+        1179,
+        266,
+        223,
+        196
+      ],
+      "dims": [
+        223,
+        196
+      ],
+      "transparency": true,
+      "matte_method": "color_distance_soft",
+      "identity": "Locked Wild",
+      "suggested_identity": null,
+      "identity_confidence": "certain",
+      "review_status": "ok",
+      "notes": null
+    },
+    {
+      "id": "feature_spirituality",
+      "path": "assets/library/symbols/feature/feature_spirituality.png",
+      "category": "symbols/feature",
+      "source": "assets/source/03_labeled_symbols_sheet.jpg",
+      "crop": [
+        6,
+        522,
+        223,
+        196
+      ],
+      "dims": [
+        223,
+        196
+      ],
+      "transparency": true,
+      "matte_method": "color_distance_soft",
+      "identity": "Spirituality",
+      "suggested_identity": null,
+      "identity_confidence": "certain",
+      "review_status": "ok",
+      "notes": null
+    },
+    {
+      "id": "feature_grafting",
+      "path": "assets/library/symbols/feature/feature_grafting.png",
+      "category": "symbols/feature",
+      "source": "assets/source/03_labeled_symbols_sheet.jpg",
+      "crop": [
+        241,
+        522,
+        222,
+        196
+      ],
+      "dims": [
+        222,
+        196
+      ],
+      "transparency": true,
+      "matte_method": "color_distance_soft",
+      "identity": "Grafting",
+      "suggested_identity": null,
+      "identity_confidence": "certain",
+      "review_status": "ok",
+      "notes": null
+    },
+    {
+      "id": "multiplier_x2",
+      "path": "assets/library/symbols/multiplier/multiplier_x2.png",
+      "category": "symbols/multiplier",
+      "source": "assets/source/03_labeled_symbols_sheet.jpg",
+      "crop": [
+        475,
+        522,
+        223,
+        196
+      ],
+      "dims": [
+        223,
+        196
+      ],
+      "transparency": true,
+      "matte_method": "color_distance_soft",
+      "identity": "Multiplier x2",
+      "suggested_identity": null,
+      "identity_confidence": "certain",
+      "review_status": "ok",
+      "notes": null
+    },
+    {
+      "id": "multiplier_x5",
+      "path": "assets/library/symbols/multiplier/multiplier_x5.png",
+      "category": "symbols/multiplier",
+      "source": "assets/source/03_labeled_symbols_sheet.jpg",
+      "crop": [
+        710,
+        522,
+        223,
+        196
+      ],
+      "dims": [
+        223,
+        196
+      ],
+      "transparency": true,
+      "matte_method": "color_distance_soft",
+      "identity": "Multiplier x5",
+      "suggested_identity": null,
+      "identity_confidence": "certain",
+      "review_status": "ok",
+      "notes": null
+    },
+    {
+      "id": "multiplier_x15",
+      "path": "assets/library/symbols/multiplier/multiplier_x15.png",
+      "category": "symbols/multiplier",
+      "source": "assets/source/03_labeled_symbols_sheet.jpg",
+      "crop": [
+        945,
+        522,
+        222,
+        196
+      ],
+      "dims": [
+        222,
+        196
+      ],
+      "transparency": true,
+      "matte_method": "color_distance_soft",
+      "identity": "Multiplier x15",
+      "suggested_identity": null,
+      "identity_confidence": "certain",
+      "review_status": "ok",
+      "notes": null
+    },
+    {
+      "id": "feature_glove",
+      "path": "assets/library/symbols/feature/feature_glove.png",
+      "category": "symbols/feature",
+      "source": "assets/source/03_labeled_symbols_sheet.jpg",
+      "crop": [
+        1179,
+        522,
+        223,
+        196
+      ],
+      "dims": [
+        223,
+        196
+      ],
+      "transparency": true,
+      "matte_method": "color_distance_soft",
+      "identity": "Glove",
+      "suggested_identity": null,
+      "identity_confidence": "certain",
+      "review_status": "ok",
+      "notes": null
+    },
+    {
+      "id": "hv_icon_r1c1_mask",
+      "path": "assets/library/symbols/high/hv_icon_r1c1_mask.png",
+      "category": "symbols/high",
+      "source": "assets/source/04_high_value_icons_sheet.jpg",
+      "crop": [
+        6,
+        8,
+        223,
+        240
+      ],
+      "dims": [
+        223,
+        240
+      ],
+      "transparency": true,
+      "matte_method": "color_distance_soft",
+      "identity": "Ornate silver mask with cyan eyes",
+      "suggested_identity": "Magician or Fool (guess)",
+      "identity_confidence": "uncertain",
+      "review_status": "needs_review",
+      "notes": "Tarot/pathway name mapping is a guess; keep needs_review until owner confirms."
+    },
+    {
+      "id": "hv_icon_r1c2_staff",
+      "path": "assets/library/symbols/high/hv_icon_r1c2_staff.png",
+      "category": "symbols/high",
+      "source": "assets/source/04_high_value_icons_sheet.jpg",
+      "crop": [
+        241,
+        8,
+        222,
+        240
+      ],
+      "dims": [
+        222,
+        240
+      ],
+      "transparency": true,
+      "matte_method": "color_distance_soft",
+      "identity": "Crystal-topped staff",
+      "suggested_identity": "Magician (guess)",
+      "identity_confidence": "uncertain",
+      "review_status": "needs_review",
+      "notes": "Tarot/pathway name mapping is a guess; keep needs_review until owner confirms."
+    },
+    {
+      "id": "hv_icon_r1c3_mirror",
+      "path": "assets/library/symbols/high/hv_icon_r1c3_mirror.png",
+      "category": "symbols/high",
+      "source": "assets/source/04_high_value_icons_sheet.jpg",
+      "crop": [
+        475,
+        8,
+        223,
+        240
+      ],
+      "dims": [
+        223,
+        240
+      ],
+      "transparency": true,
+      "matte_method": "color_distance_soft",
+      "identity": "Purple crescent hand-mirror",
+      "suggested_identity": "High Priestess (guess)",
+      "identity_confidence": "uncertain",
+      "review_status": "needs_review",
+      "notes": "Tarot/pathway name mapping is a guess; keep needs_review until owner confirms."
+    },
+    {
+      "id": "hv_icon_r1c4_zodiac_disk",
+      "path": "assets/library/symbols/high/hv_icon_r1c4_zodiac_disk.png",
+      "category": "symbols/high",
+      "source": "assets/source/04_high_value_icons_sheet.jpg",
+      "crop": [
+        710,
+        8,
+        223,
+        240
+      ],
+      "dims": [
+        223,
+        240
+      ],
+      "transparency": true,
+      "matte_method": "color_distance_soft",
+      "identity": "Blue astrology / zodiac disk",
+      "suggested_identity": "Wheel of Fortune or World (guess)",
+      "identity_confidence": "uncertain",
+      "review_status": "needs_review",
+      "notes": "Tarot/pathway name mapping is a guess; keep needs_review until owner confirms."
+    },
+    {
+      "id": "hv_icon_r1c5_ruby_pendant",
+      "path": "assets/library/symbols/high/hv_icon_r1c5_ruby_pendant.png",
+      "category": "symbols/high",
+      "source": "assets/source/04_high_value_icons_sheet.jpg",
+      "crop": [
+        945,
+        8,
+        222,
+        240
+      ],
+      "dims": [
+        222,
+        240
+      ],
+      "transparency": true,
+      "matte_method": "color_distance_soft",
+      "identity": "Red gem pendant on dual chains",
+      "suggested_identity": null,
+      "identity_confidence": "uncertain",
+      "review_status": "needs_review",
+      "notes": "Tarot/pathway name mapping is a guess; keep needs_review until owner confirms."
+    },
+    {
+      "id": "hv_icon_r1c6_sun_compass",
+      "path": "assets/library/symbols/high/hv_icon_r1c6_sun_compass.png",
+      "category": "symbols/high",
+      "source": "assets/source/04_high_value_icons_sheet.jpg",
+      "crop": [
+        1179,
+        8,
+        223,
+        240
+      ],
+      "dims": [
+        223,
+        240
+      ],
+      "transparency": true,
+      "matte_method": "color_distance_soft",
+      "identity": "Golden sun / compass disk",
+      "suggested_identity": "Wheel of Fortune or Sun (guess)",
+      "identity_confidence": "uncertain",
+      "review_status": "needs_review",
+      "notes": "Tarot/pathway name mapping is a guess; keep needs_review until owner confirms."
+    },
+    {
+      "id": "hv_icon_r2c1_hanged_figure",
+      "path": "assets/library/symbols/high/hv_icon_r2c1_hanged_figure.png",
+      "category": "symbols/high",
+      "source": "assets/source/04_high_value_icons_sheet.jpg",
+      "crop": [
+        6,
+        264,
+        223,
+        240
+      ],
+      "dims": [
+        223,
+        240
+      ],
+      "transparency": true,
+      "matte_method": "color_distance_soft",
+      "identity": "Inverted metallic figure on chains with red aura",
+      "suggested_identity": "Hanged Man (likely)",
+      "identity_confidence": "likely",
+      "review_status": "needs_review",
+      "notes": "Tarot/pathway name mapping is a guess; keep needs_review until owner confirms."
+    },
+    {
+      "id": "hv_icon_r2c2_armillary",
+      "path": "assets/library/symbols/high/hv_icon_r2c2_armillary.png",
+      "category": "symbols/high",
+      "source": "assets/source/04_high_value_icons_sheet.jpg",
+      "crop": [
+        241,
+        264,
+        222,
+        240
+      ],
+      "dims": [
+        222,
+        240
+      ],
+      "transparency": true,
+      "matte_method": "color_distance_soft",
+      "identity": "Brass armillary sphere with blue core",
+      "suggested_identity": "World (guess)",
+      "identity_confidence": "uncertain",
+      "review_status": "needs_review",
+      "notes": "Tarot/pathway name mapping is a guess; keep needs_review until owner confirms."
+    },
+    {
+      "id": "hv_icon_r2c3_lantern",
+      "path": "assets/library/symbols/high/hv_icon_r2c3_lantern.png",
+      "category": "symbols/high",
+      "source": "assets/source/04_high_value_icons_sheet.jpg",
+      "crop": [
+        475,
+        264,
+        223,
+        240
+      ],
+      "dims": [
+        223,
+        240
+      ],
+      "transparency": true,
+      "matte_method": "color_distance_soft",
+      "identity": "Antique lantern with warm flame",
+      "suggested_identity": null,
+      "identity_confidence": "uncertain",
+      "review_status": "needs_review",
+      "notes": "Tarot/pathway name mapping is a guess; keep needs_review until owner confirms."
+    },
+    {
+      "id": "hv_icon_r2c4_moth",
+      "path": "assets/library/symbols/high/hv_icon_r2c4_moth.png",
+      "category": "symbols/high",
+      "source": "assets/source/04_high_value_icons_sheet.jpg",
+      "crop": [
+        710,
+        264,
+        223,
+        240
+      ],
+      "dims": [
+        223,
+        240
+      ],
+      "transparency": true,
+      "matte_method": "color_distance_soft",
+      "identity": "Death's-head moth",
+      "suggested_identity": null,
+      "identity_confidence": "uncertain",
+      "review_status": "needs_review",
+      "notes": "Tarot/pathway name mapping is a guess; keep needs_review until owner confirms."
+    },
+    {
+      "id": "hv_icon_r2c5_crescent_moon",
+      "path": "assets/library/symbols/high/hv_icon_r2c5_crescent_moon.png",
+      "category": "symbols/high",
+      "source": "assets/source/04_high_value_icons_sheet.jpg",
+      "crop": [
+        945,
+        264,
+        222,
+        240
+      ],
+      "dims": [
+        222,
+        240
+      ],
+      "transparency": true,
+      "matte_method": "color_distance_soft",
+      "identity": "Silver crescent moon with stars",
+      "suggested_identity": "Moon or High Priestess (guess)",
+      "identity_confidence": "uncertain",
+      "review_status": "needs_review",
+      "notes": "Tarot/pathway name mapping is a guess; keep needs_review until owner confirms."
+    },
+    {
+      "id": "hv_icon_r2c6_radiant_sun",
+      "path": "assets/library/symbols/high/hv_icon_r2c6_radiant_sun.png",
+      "category": "symbols/high",
+      "source": "assets/source/04_high_value_icons_sheet.jpg",
+      "crop": [
+        1179,
+        264,
+        223,
+        240
+      ],
+      "dims": [
+        223,
+        240
+      ],
+      "transparency": true,
+      "matte_method": "color_distance_soft",
+      "identity": "Radiant golden sun",
+      "suggested_identity": "Sun (likely)",
+      "identity_confidence": "likely",
+      "review_status": "needs_review",
+      "notes": "Tarot/pathway name mapping is a guess; keep needs_review until owner confirms."
+    },
+    {
+      "id": "hv_icon_r3c1_crown",
+      "path": "assets/library/symbols/high/hv_icon_r3c1_crown.png",
+      "category": "symbols/high",
+      "source": "assets/source/04_high_value_icons_sheet.jpg",
+      "crop": [
+        6,
+        520,
+        223,
+        240
+      ],
+      "dims": [
+        223,
+        240
+      ],
+      "transparency": true,
+      "matte_method": "color_distance_soft",
+      "identity": "Dark-gold crown with rubies",
+      "suggested_identity": "Fool pathway crown (guess)",
+      "identity_confidence": "uncertain",
+      "review_status": "needs_review",
+      "notes": "Tarot/pathway name mapping is a guess; keep needs_review until owner confirms."
+    },
+    {
+      "id": "hv_icon_r3c2_rose",
+      "path": "assets/library/symbols/high/hv_icon_r3c2_rose.png",
+      "category": "symbols/high",
+      "source": "assets/source/04_high_value_icons_sheet.jpg",
+      "crop": [
+        241,
+        520,
+        222,
+        240
+      ],
+      "dims": [
+        222,
+        240
+      ],
+      "transparency": true,
+      "matte_method": "color_distance_soft",
+      "identity": "Red rose with gold vines",
+      "suggested_identity": null,
+      "identity_confidence": "uncertain",
+      "review_status": "needs_review",
+      "notes": "Tarot/pathway name mapping is a guess; keep needs_review until owner confirms."
+    },
+    {
+      "id": "hv_icon_r3c3_tower",
+      "path": "assets/library/symbols/high/hv_icon_r3c3_tower.png",
+      "category": "symbols/high",
+      "source": "assets/source/04_high_value_icons_sheet.jpg",
+      "crop": [
+        475,
+        520,
+        223,
+        240
+      ],
+      "dims": [
+        223,
+        240
+      ],
+      "transparency": true,
+      "matte_method": "color_distance_soft",
+      "identity": "Gothic tower struck by purple lightning",
+      "suggested_identity": "Tower (likely)",
+      "identity_confidence": "likely",
+      "review_status": "needs_review",
+      "notes": "Tarot/pathway name mapping is a guess; keep needs_review until owner confirms."
+    },
+    {
+      "id": "hv_icon_r3c4_bell",
+      "path": "assets/library/symbols/high/hv_icon_r3c4_bell.png",
+      "category": "symbols/high",
+      "source": "assets/source/04_high_value_icons_sheet.jpg",
+      "crop": [
+        710,
+        520,
+        223,
+        240
+      ],
+      "dims": [
+        223,
+        240
+      ],
+      "transparency": true,
+      "matte_method": "color_distance_soft",
+      "identity": "Silver rune bell",
+      "suggested_identity": null,
+      "identity_confidence": "uncertain",
+      "review_status": "needs_review",
+      "notes": "Tarot/pathway name mapping is a guess; keep needs_review until owner confirms."
+    },
+    {
+      "id": "hv_icon_r3c5_flaming_wheel",
+      "path": "assets/library/symbols/high/hv_icon_r3c5_flaming_wheel.png",
+      "category": "symbols/high",
+      "source": "assets/source/04_high_value_icons_sheet.jpg",
+      "crop": [
+        945,
+        520,
+        222,
+        240
+      ],
+      "dims": [
+        222,
+        240
+      ],
+      "transparency": true,
+      "matte_method": "color_distance_soft",
+      "identity": "Spiked wheel wreathed in blue fire",
+      "suggested_identity": "Wheel of Fortune or World (guess)",
+      "identity_confidence": "uncertain",
+      "review_status": "needs_review",
+      "notes": "Tarot/pathway name mapping is a guess; keep needs_review until owner confirms."
+    },
+    {
+      "id": "hv_icon_r3c6_star",
+      "path": "assets/library/symbols/high/hv_icon_r3c6_star.png",
+      "category": "symbols/high",
+      "source": "assets/source/04_high_value_icons_sheet.jpg",
+      "crop": [
+        1179,
+        520,
+        223,
+        240
+      ],
+      "dims": [
+        223,
+        240
+      ],
+      "transparency": true,
+      "matte_method": "color_distance_soft",
+      "identity": "Multi-point glowing star",
+      "suggested_identity": "Star or Fool (guess)",
+      "identity_confidence": "uncertain",
+      "review_status": "needs_review",
+      "notes": "Tarot/pathway name mapping is a guess; keep needs_review until owner confirms."
+    },
+    {
+      "id": "bg_gothic_library",
+      "path": "assets/library/backgrounds/bg_gothic_library.png",
+      "category": "backgrounds",
+      "source": "assets/source/02_library_background.jpg",
+      "crop": [
+        0,
+        0,
+        1376,
+        768
+      ],
+      "dims": [
+        1376,
+        768
+      ],
+      "transparency": false,
+      "matte_method": "opaque_passthrough",
+      "identity": "Moonlit gothic library background",
+      "suggested_identity": null,
+      "identity_confidence": "certain",
+      "review_status": "ok",
+      "notes": "Opaque standalone. Baked-in decorative WILD book on shelf is not a reel symbol."
+    },
+    {
+      "id": "ui_big_win_banner",
+      "path": "assets/library/ui/banners/ui_big_win_banner.png",
+      "category": "ui/banners",
+      "source": "assets/source/01_ui_kit_sheet.jpg",
+      "crop": [
+        20,
+        20,
+        700,
+        320
+      ],
+      "dims": [
+        700,
+        320
+      ],
+      "transparency": true,
+      "matte_method": "color_distance_soft",
+      "identity": "BIG WIN banner",
+      "suggested_identity": null,
+      "identity_confidence": "certain",
+      "review_status": "ok",
+      "notes": null
+    },
+    {
+      "id": "ui_spin_button",
+      "path": "assets/library/ui/buttons/ui_spin_button.png",
+      "category": "ui/buttons",
+      "source": "assets/source/01_ui_kit_sheet.jpg",
+      "crop": [
+        735,
+        40,
+        320,
+        330
+      ],
+      "dims": [
+        320,
+        330
+      ],
+      "transparency": true,
+      "matte_method": "color_distance_soft",
+      "identity": "Spin button",
+      "suggested_identity": null,
+      "identity_confidence": "certain",
+      "review_status": "ok",
+      "notes": null
+    },
+    {
+      "id": "ui_spirituality_meter",
+      "path": "assets/library/ui/meters/ui_spirituality_meter.png",
+      "category": "ui/meters",
+      "source": "assets/source/01_ui_kit_sheet.jpg",
+      "crop": [
+        1195,
+        35,
+        195,
+        700
+      ],
+      "dims": [
+        195,
+        700
+      ],
+      "transparency": true,
+      "matte_method": "color_distance_soft",
+      "identity": "Teal glowing meter bar",
+      "suggested_identity": null,
+      "identity_confidence": "certain",
+      "review_status": "needs_review",
+      "notes": "Wispy teal helix may retain soft fringe; verify on contact sheet."
+    },
+    {
+      "id": "ui_parchment_panel",
+      "path": "assets/library/ui/panels/ui_parchment_panel.png",
+      "category": "ui/panels",
+      "source": "assets/source/01_ui_kit_sheet.jpg",
+      "crop": [
+        395,
+        435,
+        610,
+        285
+      ],
+      "dims": [
+        610,
+        285
+      ],
+      "transparency": false,
+      "matte_method": "opaque_passthrough",
+      "identity": "Ornate parchment panel",
+      "suggested_identity": null,
+      "identity_confidence": "certain",
+      "review_status": "ok",
+      "notes": "Opaque panel kept intact (no background removal)."
+    },
+    {
+      "id": "ui_divider_v_silver",
+      "path": "assets/library/ui/dividers/ui_divider_v_silver.png",
+      "category": "ui/dividers",
+      "source": "assets/source/01_ui_kit_sheet.jpg",
+      "crop": [
+        48,
+        375,
+        55,
+        270
+      ],
+      "dims": [
+        55,
+        270
+      ],
+      "transparency": true,
+      "matte_method": "color_distance_soft",
+      "identity": "Vertical silver divider",
+      "suggested_identity": null,
+      "identity_confidence": "certain",
+      "review_status": "ok",
+      "notes": null
+    },
+    {
+      "id": "ui_divider_v_gold",
+      "path": "assets/library/ui/dividers/ui_divider_v_gold.png",
+      "category": "ui/dividers",
+      "source": "assets/source/01_ui_kit_sheet.jpg",
+      "crop": [
+        105,
+        375,
+        55,
+        270
+      ],
+      "dims": [
+        55,
+        270
+      ],
+      "transparency": true,
+      "matte_method": "color_distance_soft",
+      "identity": "Vertical gold divider",
+      "suggested_identity": null,
+      "identity_confidence": "certain",
+      "review_status": "ok",
+      "notes": null
+    },
+    {
+      "id": "ui_divider_v_rune",
+      "path": "assets/library/ui/dividers/ui_divider_v_rune.png",
+      "category": "ui/dividers",
+      "source": "assets/source/01_ui_kit_sheet.jpg",
+      "crop": [
+        165,
+        375,
+        50,
+        270
+      ],
+      "dims": [
+        50,
+        270
+      ],
+      "transparency": true,
+      "matte_method": "color_distance_soft",
+      "identity": "Vertical rune bar",
+      "suggested_identity": null,
+      "identity_confidence": "certain",
+      "review_status": "ok",
+      "notes": null
+    },
+    {
+      "id": "ui_divider_h_silver",
+      "path": "assets/library/ui/dividers/ui_divider_h_silver.png",
+      "category": "ui/dividers",
+      "source": "assets/source/01_ui_kit_sheet.jpg",
+      "crop": [
+        70,
+        645,
+        310,
+        58
+      ],
+      "dims": [
+        310,
+        58
+      ],
+      "transparency": true,
+      "matte_method": "color_distance_soft",
+      "identity": "Horizontal silver divider",
+      "suggested_identity": null,
+      "identity_confidence": "certain",
+      "review_status": "ok",
+      "notes": null
+    },
+    {
+      "id": "ui_divider_h_gold",
+      "path": "assets/library/ui/dividers/ui_divider_h_gold.png",
+      "category": "ui/dividers",
+      "source": "assets/source/01_ui_kit_sheet.jpg",
+      "crop": [
+        70,
+        705,
+        310,
+        55
+      ],
+      "dims": [
+        310,
+        55
+      ],
+      "transparency": true,
+      "matte_method": "color_distance_soft",
+      "identity": "Horizontal gold divider",
+      "suggested_identity": null,
+      "identity_confidence": "certain",
+      "review_status": "ok",
+      "notes": null
+    },
+    {
+      "id": "ui_corner_tr",
+      "path": "assets/library/ui/corners/ui_corner_tr.png",
+      "category": "ui/corners",
+      "source": "assets/source/01_ui_kit_sheet.jpg",
+      "crop": [
+        1075,
+        15,
+        120,
+        120
+      ],
+      "dims": [
+        120,
+        120
+      ],
+      "transparency": true,
+      "matte_method": "color_distance_soft",
+      "identity": "Gold corner ornament (top-right style)",
+      "suggested_identity": null,
+      "identity_confidence": "certain",
+      "review_status": "needs_review",
+      "notes": "Thin filigree; verify no clipping / leftover sheet texture."
+    },
+    {
+      "id": "ui_corner_bl",
+      "path": "assets/library/ui/corners/ui_corner_bl.png",
+      "category": "ui/corners",
+      "source": "assets/source/01_ui_kit_sheet.jpg",
+      "crop": [
+        35,
+        675,
+        100,
+        90
+      ],
+      "dims": [
+        100,
+        90
+      ],
+      "transparency": true,
+      "matte_method": "color_distance_soft",
+      "identity": "Gold corner ornament (bottom-left)",
+      "suggested_identity": null,
+      "identity_confidence": "certain",
+      "review_status": "needs_review",
+      "notes": "Thin filigree; verify no clipping / leftover sheet texture."
+    },
+    {
+      "id": "ui_corner_br",
+      "path": "assets/library/ui/corners/ui_corner_br.png",
+      "category": "ui/corners",
+      "source": "assets/source/01_ui_kit_sheet.jpg",
+      "crop": [
+        1040,
+        670,
+        120,
+        95
+      ],
+      "dims": [
+        120,
+        95
+      ],
+      "transparency": true,
+      "matte_method": "color_distance_soft",
+      "identity": "Gold corner ornament (bottom-right)",
+      "suggested_identity": null,
+      "identity_confidence": "certain",
+      "review_status": "needs_review",
+      "notes": "Thin filigree; verify no clipping / leftover sheet texture."
+    },
+    {
+      "id": "ui_corner_near_parchment",
+      "path": "assets/library/ui/corners/ui_corner_near_parchment.png",
+      "category": "ui/corners",
+      "source": "assets/source/01_ui_kit_sheet.jpg",
+      "crop": [
+        320,
+        620,
+        90,
+        90
+      ],
+      "dims": [
+        90,
+        90
+      ],
+      "transparency": true,
+      "matte_method": "color_distance_soft",
+      "identity": "Gold corner filigree near parchment",
+      "suggested_identity": null,
+      "identity_confidence": "certain",
+      "review_status": "needs_review",
+      "notes": "Thin filigree; verify no clipping / leftover sheet texture."
+    }
+  ]
+}

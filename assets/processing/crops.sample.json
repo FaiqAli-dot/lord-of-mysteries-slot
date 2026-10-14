@@ -1,95 +1,175 @@
 {
   "$schema_comment": "Crop boxes are [x, y, width, height] in source pixel space. Edit boxes and re-run scripts/extract_assets.py to fix individual crops without regenerating art.",
-  "version": 1,
+  "version": 2,
   "defaults": {
     "matte": {
       "method": "color_distance_soft",
       "bg_sample": "corners",
       "corner_inset": 4,
       "corner_size": 10,
-      "near": 18,
-      "far": 55,
-      "despill": 0.55,
-      "feather_px": 0.75
+      "near": 15,
+      "far": 52,
+      "despill": 0.4,
+      "feather_px": 0.6,
+      "protect_dark": true,
+      "protect_lum_max": 95,
+      "protect_alpha_floor": 0.94,
+      "core_threshold": 0.28,
+      "close_radius": 3,
+      "dilate_radius": 2
     },
     "rembg": {
       "enabled": false,
       "model": "u2net",
-      "note": "Optional alternative; enable per-asset with matte.method=rembg. Prefer color_distance_soft for glow preservation on dark textured JPG sheets."
+      "note": "Optional alternative; enable per-asset with matte.method=rembg."
     }
   },
   "assets": [
     {
       "id": "hv_hanged_man",
-      "category": "symbol_high",
+      "category": "symbols/high",
       "role": "sample_high_value",
-      "identity": "Hanged Man–like inverted figure pendant (chains + red aura)",
+      "identity": "Inverted metallic figure on chains with red aura",
+      "suggested_identity": "Hanged Man (likely)",
       "identity_confidence": "likely",
       "review_status": "needs_review",
-      "notes": "THE FOOL is not identifiable on sheet 04. Sample uses this icon instead. Do not map to FOOL without owner approval. Possible LotM/tarot mapping: Hanged Man.",
+      "notes": "Sample alias for hv_icon_r2c1_hanged_figure. Dark silhouette protection enabled. Do not map to FOOL without owner approval.",
       "source": "assets/source/04_high_value_icons_sheet.jpg",
-      "source_alias": "assets/source/99dbb236b7a6149b8d87437b767331f3cbe77ebd610061d21ef01040e2857df7_d88f.jpg",
-      "grid": { "cols": 6, "rows": 3, "col": 0, "row": 1 },
-      "crop": [6, 260, 223, 248],
+      "grid": {
+        "cols": 6,
+        "rows": 3,
+        "col": 0,
+        "row": 1
+      },
+      "crop": [
+        6,
+        264,
+        223,
+        240
+      ],
       "transparency": true,
-      "matte": { "method": "color_distance_soft", "near": 16, "far": 52 }
+      "matte": {
+        "near": 12,
+        "far": 48,
+        "protect_dark": true,
+        "protect_lum_max": 125,
+        "protect_alpha_floor": 0.97,
+        "core_threshold": 0.22,
+        "close_radius": 7,
+        "dilate_radius": 0,
+        "despill": 0.2,
+        "feather_px": 0.5
+      }
     },
     {
       "id": "low_ace",
-      "category": "symbol_low",
+      "category": "symbols/low",
       "role": "sample_low",
       "identity": "A (Ace)",
       "identity_confidence": "certain",
       "review_status": "ok",
-      "notes": "Labeled sheet row0 col0. Blue-white smoke requires soft matte.",
+      "notes": "Widened to cell gap; source smoke meets K-flame boundary ~x=281 so right edge is soft-faded.",
       "source": "assets/source/03_labeled_symbols_sheet.jpg",
-      "source_alias": "assets/source/949100b2816b037f1fbd8ab521b22f4543cbfa7488aca6c19b089e5d98e9eb1a_a286.jpg",
-      "grid": { "cols": 6, "rows": 3, "col": 0, "row": 0 },
-      "crop": [8, 12, 219, 236],
+      "grid": {
+        "cols": 6,
+        "rows": 3,
+        "col": 0,
+        "row": 0
+      },
+      "crop": [
+        0,
+        2,
+        278,
+        252
+      ],
       "transparency": true,
-      "matte": { "method": "color_distance_soft", "near": 14, "far": 48 }
+      "matte": {
+        "near": 14,
+        "far": 48,
+        "protect_dark": true,
+        "protect_lum_max": 50,
+        "protect_alpha_floor": 0.9,
+        "dilate_radius": 0,
+        "despill": 0.35,
+        "close_radius": 2,
+        "right_edge_fade_px": 28
+      }
     },
     {
       "id": "wild_basic",
-      "category": "symbol_wild",
+      "category": "symbols/wild",
       "role": "sample_wild",
       "identity": "WILD (basic gold medallion)",
       "identity_confidence": "certain",
       "review_status": "ok",
-      "notes": "Labeled sheet row0 col5. Other WILD variants (flaming, celestial, locked) deferred to full extract.",
       "source": "assets/source/03_labeled_symbols_sheet.jpg",
-      "source_alias": "assets/source/949100b2816b037f1fbd8ab521b22f4543cbfa7488aca6c19b089e5d98e9eb1a_a286.jpg",
-      "grid": { "cols": 6, "rows": 3, "col": 5, "row": 0 },
-      "crop": [1181, 12, 219, 236],
+      "grid": {
+        "cols": 6,
+        "rows": 3,
+        "col": 5,
+        "row": 0
+      },
+      "crop": [
+        1181,
+        12,
+        219,
+        236
+      ],
       "transparency": true,
-      "matte": { "method": "color_distance_soft", "near": 18, "far": 50 }
+      "matte": {
+        "near": 18,
+        "far": 50,
+        "protect_dark": true
+      }
     },
     {
       "id": "scatter_wax_seal",
-      "category": "symbol_scatter",
+      "category": "symbols/scatter",
       "role": "sample_scatter",
       "identity": "SCATTER (red wax seal)",
       "identity_confidence": "certain",
       "review_status": "ok",
-      "notes": "Labeled sheet row1 col2. bottom_trim excludes yellow caption text under icon. Left edge may include faint glow bleed from adjacent celestial WILD — tighten crop if needed.",
+      "notes": "Left crop tightened + left_edge teal mask to remove celestial WILD bleed.",
       "source": "assets/source/03_labeled_symbols_sheet.jpg",
-      "source_alias": "assets/source/949100b2816b037f1fbd8ab521b22f4543cbfa7488aca6c19b089e5d98e9eb1a_a286.jpg",
-      "grid": { "cols": 6, "rows": 3, "col": 2, "row": 1 },
-      "crop": [475, 260, 223, 212],
+      "grid": {
+        "cols": 6,
+        "rows": 3,
+        "col": 2,
+        "row": 1
+      },
+      "crop": [
+        524,
+        255,
+        178,
+        196
+      ],
       "transparency": true,
-      "matte": { "method": "color_distance_soft", "near": 16, "far": 50 }
+      "matte": {
+        "near": 16,
+        "far": 50,
+        "protect_dark": true,
+        "protect_lum_max": 70,
+        "left_edge_mask_px": 50,
+        "left_edge_teal_bias": 0.5,
+        "despill": 0.35,
+        "post_kill_left_cyan": true
+      }
     },
     {
       "id": "bg_gothic_library",
-      "category": "background",
+      "category": "backgrounds",
       "role": "sample_background",
       "identity": "Moonlit gothic library background",
       "identity_confidence": "certain",
       "review_status": "ok",
-      "notes": "Standalone opaque scene. Keep intact — no transparency / no rembg. Contains baked-in decorative WILD book on shelf (not a reel symbol).",
+      "notes": "Standalone opaque scene. Keep intact \u2014 no transparency.",
       "source": "assets/source/02_library_background.jpg",
-      "source_alias": "assets/source/ccb80e38562d35b7a4abc6d7ee8e5eb845a7e6676ef9c1b2c779044b14e8fbf8_a7fb.jpg",
-      "crop": [0, 0, 1376, 768],
+      "crop": [
+        0,
+        0,
+        1376,
+        768
+      ],
       "transparency": false
     }
   ]
