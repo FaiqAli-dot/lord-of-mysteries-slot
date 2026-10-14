@@ -433,12 +433,13 @@
         240
       ],
       "transparency": true,
-      "matte_method": "color_distance_soft",
+      "matte_method": "color_distance_soft+sheet_halo",
       "identity": "Ornate silver mask with cyan eyes",
       "suggested_identity": "Magician or Fool (guess)",
       "identity_confidence": "uncertain",
       "review_status": "needs_review",
-      "notes": "Tarot/pathway name mapping is a guess; keep needs_review until owner confirms."
+      "notes": "Tarot/pathway name mapping is a guess; keep needs_review until owner confirms.",
+      "game_symbol_id": null
     },
     {
       "id": "hv_icon_r1c2_staff",
@@ -456,12 +457,13 @@
         240
       ],
       "transparency": true,
-      "matte_method": "color_distance_soft",
+      "matte_method": "color_distance_soft+sheet_halo",
       "identity": "Crystal-topped staff",
-      "suggested_identity": "Magician (guess)",
-      "identity_confidence": "uncertain",
-      "review_status": "needs_review",
-      "notes": "Tarot/pathway name mapping is a guess; keep needs_review until owner confirms."
+      "suggested_identity": "MAGICIAN",
+      "identity_confidence": "mvp_assigned",
+      "review_status": "ok",
+      "notes": "Tarot/pathway name mapping is a guess; keep needs_review until owner confirms. MVP mapped to SymbolId MAGICIAN.",
+      "game_symbol_id": "MAGICIAN"
     },
     {
       "id": "hv_icon_r1c3_mirror",
@@ -479,12 +481,13 @@
         240
       ],
       "transparency": true,
-      "matte_method": "color_distance_soft",
+      "matte_method": "color_distance_soft+sheet_halo",
       "identity": "Purple crescent hand-mirror",
-      "suggested_identity": "High Priestess (guess)",
-      "identity_confidence": "uncertain",
-      "review_status": "needs_review",
-      "notes": "Tarot/pathway name mapping is a guess; keep needs_review until owner confirms."
+      "suggested_identity": "PRIESTESS",
+      "identity_confidence": "mvp_assigned",
+      "review_status": "ok",
+      "notes": "Tarot/pathway name mapping is a guess; keep needs_review until owner confirms. MVP mapped to SymbolId PRIESTESS.",
+      "game_symbol_id": "PRIESTESS"
     },
     {
       "id": "hv_icon_r1c4_zodiac_disk",
@@ -502,12 +505,13 @@
         240
       ],
       "transparency": true,
-      "matte_method": "color_distance_soft",
+      "matte_method": "color_distance_soft+sheet_halo",
       "identity": "Blue astrology / zodiac disk",
-      "suggested_identity": "Wheel of Fortune or World (guess)",
-      "identity_confidence": "uncertain",
-      "review_status": "needs_review",
-      "notes": "Tarot/pathway name mapping is a guess; keep needs_review until owner confirms."
+      "suggested_identity": "WHEEL",
+      "identity_confidence": "mvp_assigned",
+      "review_status": "ok",
+      "notes": "Tarot/pathway name mapping is a guess; keep needs_review until owner confirms. MVP mapped to SymbolId WHEEL.",
+      "game_symbol_id": "WHEEL"
     },
     {
       "id": "hv_icon_r1c5_ruby_pendant",
@@ -517,20 +521,21 @@
       "crop": [
         945,
         8,
-        222,
+        206,
         240
       ],
       "dims": [
-        222,
+        206,
         240
       ],
       "transparency": true,
-      "matte_method": "color_distance_soft",
+      "matte_method": "color_distance_soft+sheet_halo",
       "identity": "Red gem pendant on dual chains",
       "suggested_identity": null,
       "identity_confidence": "uncertain",
       "review_status": "needs_review",
-      "notes": "Tarot/pathway name mapping is a guess; keep needs_review until owner confirms."
+      "notes": "Tarot/pathway name mapping is a guess; keep needs_review until owner confirms.",
+      "game_symbol_id": null
     },
     {
       "id": "hv_icon_r1c6_sun_compass",
@@ -548,12 +553,13 @@
         240
       ],
       "transparency": true,
-      "matte_method": "color_distance_soft",
+      "matte_method": "color_distance_soft+sheet_halo",
       "identity": "Golden sun / compass disk",
       "suggested_identity": "Wheel of Fortune or Sun (guess)",
       "identity_confidence": "uncertain",
       "review_status": "needs_review",
-      "notes": "Tarot/pathway name mapping is a guess; keep needs_review until owner confirms."
+      "notes": "Tarot/pathway name mapping is a guess; keep needs_review until owner confirms.",
+      "game_symbol_id": null
     },
     {
       "id": "hv_icon_r2c1_hanged_figure",
@@ -571,12 +577,13 @@
         240
       ],
       "transparency": true,
-      "matte_method": "color_distance_soft",
+      "matte_method": "color_distance_soft+sheet_halo",
       "identity": "Inverted metallic figure on chains with red aura",
-      "suggested_identity": "Hanged Man (likely)",
-      "identity_confidence": "likely",
-      "review_status": "needs_review",
-      "notes": "Tarot/pathway name mapping is a guess; keep needs_review until owner confirms."
+      "suggested_identity": "HANGED",
+      "identity_confidence": "mvp_assigned",
+      "review_status": "ok",
+      "notes": "Tarot/pathway name mapping is a guess; keep needs_review until owner confirms. MVP mapped to SymbolId HANGED.",
+      "game_symbol_id": "HANGED"
     },
     {
       "id": "hv_icon_r2c2_armillary",
@@ -594,12 +601,13 @@
         240
       ],
       "transparency": true,
-      "matte_method": "color_distance_soft",
+      "matte_method": "color_distance_soft+sheet_halo",
       "identity": "Brass armillary sphere with blue core",
-      "suggested_identity": "World (guess)",
-      "identity_confidence": "uncertain",
-      "review_status": "needs_review",
-      "notes": "Tarot/pathway name mapping is a guess; keep needs_review until owner confirms."
+      "suggested_identity": "WORLD",
+      "identity_confidence": "mvp_assigned",
+      "review_status": "ok",
+      "notes": "Tarot/pathway name mapping is a guess; keep needs_review until owner confirms. MVP mapped to SymbolId WORLD.",
+      "game_symbol_id": "WORLD"
     },
     {
       "id": "hv_icon_r2c3_lantern",
@@ -617,12 +625,13 @@
         240
       ],
       "transparency": true,
-      "matte_method": "color_distance_soft",
+      "matte_method": "color_distance_soft+sheet_halo",
       "identity": "Antique lantern with warm flame",
       "suggested_identity": null,
       "identity_confidence": "uncertain",
       "review_status": "needs_review",
-      "notes": "Tarot/pathway name mapping is a guess; keep needs_review until owner confirms."
+      "notes": "Tarot/pathway name mapping is a guess; keep needs_review until owner confirms.",
+      "game_symbol_id": null
     },
     {
       "id": "hv_icon_r2c4_moth",
@@ -640,12 +649,13 @@
         240
       ],
       "transparency": true,
-      "matte_method": "color_distance_soft",
+      "matte_method": "color_distance_soft+sheet_halo",
       "identity": "Death's-head moth",
       "suggested_identity": null,
       "identity_confidence": "uncertain",
       "review_status": "needs_review",
-      "notes": "Tarot/pathway name mapping is a guess; keep needs_review until owner confirms."
+      "notes": "Tarot/pathway name mapping is a guess; keep needs_review until owner confirms.",
+      "game_symbol_id": null
     },
     {
       "id": "hv_icon_r2c5_crescent_moon",
@@ -653,22 +663,23 @@
       "category": "symbols/high",
       "source": "assets/source/04_high_value_icons_sheet.jpg",
       "crop": [
-        945,
+        955,
         264,
-        222,
+        202,
         240
       ],
       "dims": [
-        222,
+        202,
         240
       ],
       "transparency": true,
-      "matte_method": "color_distance_soft",
+      "matte_method": "color_distance_soft+sheet_halo",
       "identity": "Silver crescent moon with stars",
       "suggested_identity": "Moon or High Priestess (guess)",
       "identity_confidence": "uncertain",
       "review_status": "needs_review",
-      "notes": "Tarot/pathway name mapping is a guess; keep needs_review until owner confirms."
+      "notes": "Tarot/pathway name mapping is a guess; keep needs_review until owner confirms.",
+      "game_symbol_id": null
     },
     {
       "id": "hv_icon_r2c6_radiant_sun",
@@ -686,12 +697,13 @@
         240
       ],
       "transparency": true,
-      "matte_method": "color_distance_soft",
+      "matte_method": "color_distance_soft+sheet_halo",
       "identity": "Radiant golden sun",
       "suggested_identity": "Sun (likely)",
       "identity_confidence": "likely",
       "review_status": "needs_review",
-      "notes": "Tarot/pathway name mapping is a guess; keep needs_review until owner confirms."
+      "notes": "Tarot/pathway name mapping is a guess; keep needs_review until owner confirms.",
+      "game_symbol_id": null
     },
     {
       "id": "hv_icon_r3c1_crown",
@@ -709,12 +721,13 @@
         240
       ],
       "transparency": true,
-      "matte_method": "color_distance_soft",
+      "matte_method": "color_distance_soft+sheet_halo",
       "identity": "Dark-gold crown with rubies",
       "suggested_identity": "Fool pathway crown (guess)",
       "identity_confidence": "uncertain",
       "review_status": "needs_review",
-      "notes": "Tarot/pathway name mapping is a guess; keep needs_review until owner confirms."
+      "notes": "Tarot/pathway name mapping is a guess; keep needs_review until owner confirms.",
+      "game_symbol_id": null
     },
     {
       "id": "hv_icon_r3c2_rose",
@@ -722,22 +735,23 @@
       "category": "symbols/high",
       "source": "assets/source/04_high_value_icons_sheet.jpg",
       "crop": [
-        241,
+        255,
         520,
-        222,
+        208,
         240
       ],
       "dims": [
-        222,
+        208,
         240
       ],
       "transparency": true,
-      "matte_method": "color_distance_soft",
+      "matte_method": "color_distance_soft+sheet_halo",
       "identity": "Red rose with gold vines",
       "suggested_identity": null,
       "identity_confidence": "uncertain",
       "review_status": "needs_review",
-      "notes": "Tarot/pathway name mapping is a guess; keep needs_review until owner confirms."
+      "notes": "Tarot/pathway name mapping is a guess; keep needs_review until owner confirms.",
+      "game_symbol_id": null
     },
     {
       "id": "hv_icon_r3c3_tower",
@@ -755,12 +769,13 @@
         240
       ],
       "transparency": true,
-      "matte_method": "color_distance_soft",
+      "matte_method": "color_distance_soft+sheet_halo",
       "identity": "Gothic tower struck by purple lightning",
       "suggested_identity": "Tower (likely)",
       "identity_confidence": "likely",
       "review_status": "needs_review",
-      "notes": "Tarot/pathway name mapping is a guess; keep needs_review until owner confirms."
+      "notes": "Tarot/pathway name mapping is a guess; keep needs_review until owner confirms.",
+      "game_symbol_id": null
     },
     {
       "id": "hv_icon_r3c4_bell",
@@ -770,20 +785,21 @@
       "crop": [
         710,
         520,
-        223,
+        207,
         240
       ],
       "dims": [
-        223,
+        207,
         240
       ],
       "transparency": true,
-      "matte_method": "color_distance_soft",
+      "matte_method": "color_distance_soft+sheet_halo",
       "identity": "Silver rune bell",
       "suggested_identity": null,
       "identity_confidence": "uncertain",
       "review_status": "needs_review",
-      "notes": "Tarot/pathway name mapping is a guess; keep needs_review until owner confirms."
+      "notes": "Tarot/pathway name mapping is a guess; keep needs_review until owner confirms.",
+      "game_symbol_id": null
     },
     {
       "id": "hv_icon_r3c5_flaming_wheel",
@@ -801,12 +817,13 @@
         240
       ],
       "transparency": true,
-      "matte_method": "color_distance_soft",
+      "matte_method": "color_distance_soft+sheet_halo",
       "identity": "Spiked wheel wreathed in blue fire",
       "suggested_identity": "Wheel of Fortune or World (guess)",
       "identity_confidence": "uncertain",
       "review_status": "needs_review",
-      "notes": "Tarot/pathway name mapping is a guess; keep needs_review until owner confirms."
+      "notes": "Tarot/pathway name mapping is a guess; keep needs_review until owner confirms.",
+      "game_symbol_id": null
     },
     {
       "id": "hv_icon_r3c6_star",
@@ -824,12 +841,13 @@
         240
       ],
       "transparency": true,
-      "matte_method": "color_distance_soft",
+      "matte_method": "color_distance_soft+sheet_halo",
       "identity": "Multi-point glowing star",
-      "suggested_identity": "Star or Fool (guess)",
-      "identity_confidence": "uncertain",
-      "review_status": "needs_review",
-      "notes": "Tarot/pathway name mapping is a guess; keep needs_review until owner confirms."
+      "suggested_identity": "FOOL",
+      "identity_confidence": "mvp_assigned",
+      "review_status": "ok",
+      "notes": "Tarot/pathway name mapping is a guess; keep needs_review until owner confirms. MVP mapped to SymbolId FOOL.",
+      "game_symbol_id": "FOOL"
     },
     {
       "id": "bg_gothic_library",
@@ -1153,5 +1171,17 @@
       "review_status": "needs_review",
       "notes": "Thin filigree; verify no clipping / leftover sheet texture."
     }
-  ]
+  ],
+  "symbol_mapping_mvp": {
+    "version": 1,
+    "note": "Owner-authorized MVP assignment of 6 cleanest HV icons to high-value SymbolIds. Not integrated into game yet.",
+    "mapping": {
+      "FOOL": "hv_icon_r3c6_star",
+      "MAGICIAN": "hv_icon_r1c2_staff",
+      "PRIESTESS": "hv_icon_r1c3_mirror",
+      "WHEEL": "hv_icon_r1c4_zodiac_disk",
+      "HANGED": "hv_icon_r2c1_hanged_figure",
+      "WORLD": "hv_icon_r2c2_armillary"
+    }
+  }
 }

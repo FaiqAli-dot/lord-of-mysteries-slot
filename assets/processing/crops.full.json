@@ -559,23 +559,29 @@
       ],
       "transparency": true,
       "matte": {
-        "near": 14,
-        "far": 52,
+        "near": 16,
+        "far": 55,
         "protect_dark": true,
-        "protect_lum_max": 100,
-        "protect_alpha_floor": 0.95,
-        "despill": 0.35
+        "dilate_radius": 0,
+        "strip_dark_fringe": true,
+        "fringe_erode": 2,
+        "left_edge_mask_px": 10,
+        "right_edge_mask_px": 10,
+        "left_edge_teal_bias": 1000,
+        "feather_px": 0.6,
+        "post_strip_sheet_halo": true
       },
       "sheet": "04_high_value_icons_sheet",
-      "notes": "Tarot/pathway name mapping is a guess; keep needs_review until owner confirms."
+      "notes": "Tarot/pathway name mapping is a guess; keep needs_review until owner confirms.",
+      "game_symbol_id": null
     },
     {
       "id": "hv_icon_r1c2_staff",
       "category": "symbols/high",
       "identity": "Crystal-topped staff",
-      "suggested_identity": "Magician (guess)",
-      "identity_confidence": "uncertain",
-      "review_status": "needs_review",
+      "suggested_identity": "MAGICIAN",
+      "identity_confidence": "mvp_assigned",
+      "review_status": "ok",
       "source": "assets/source/04_high_value_icons_sheet.jpg",
       "grid": {
         "cols": 6,
@@ -591,23 +597,29 @@
       ],
       "transparency": true,
       "matte": {
-        "near": 12,
+        "near": 16,
         "far": 62,
         "protect_dark": true,
         "protect_lum_max": 100,
         "protect_alpha_floor": 0.95,
-        "despill": 0.35
+        "despill": 0.35,
+        "strip_dark_fringe": true,
+        "fringe_lum_max": 60,
+        "fringe_erode": 2,
+        "dilate_radius": 0,
+        "post_strip_sheet_halo": true
       },
       "sheet": "04_high_value_icons_sheet",
-      "notes": "Tarot/pathway name mapping is a guess; keep needs_review until owner confirms."
+      "notes": "Tarot/pathway name mapping is a guess; keep needs_review until owner confirms. MVP mapped to SymbolId MAGICIAN.",
+      "game_symbol_id": "MAGICIAN"
     },
     {
       "id": "hv_icon_r1c3_mirror",
       "category": "symbols/high",
       "identity": "Purple crescent hand-mirror",
-      "suggested_identity": "High Priestess (guess)",
-      "identity_confidence": "uncertain",
-      "review_status": "needs_review",
+      "suggested_identity": "PRIESTESS",
+      "identity_confidence": "mvp_assigned",
+      "review_status": "ok",
       "source": "assets/source/04_high_value_icons_sheet.jpg",
       "grid": {
         "cols": 6,
@@ -623,23 +635,29 @@
       ],
       "transparency": true,
       "matte": {
-        "near": 14,
+        "near": 16,
         "far": 52,
         "protect_dark": true,
         "protect_lum_max": 100,
         "protect_alpha_floor": 0.95,
-        "despill": 0.35
+        "despill": 0.35,
+        "strip_dark_fringe": true,
+        "fringe_lum_max": 60,
+        "fringe_erode": 2,
+        "dilate_radius": 0,
+        "post_strip_sheet_halo": true
       },
       "sheet": "04_high_value_icons_sheet",
-      "notes": "Tarot/pathway name mapping is a guess; keep needs_review until owner confirms."
+      "notes": "Tarot/pathway name mapping is a guess; keep needs_review until owner confirms. MVP mapped to SymbolId PRIESTESS.",
+      "game_symbol_id": "PRIESTESS"
     },
     {
       "id": "hv_icon_r1c4_zodiac_disk",
       "category": "symbols/high",
       "identity": "Blue astrology / zodiac disk",
-      "suggested_identity": "Wheel of Fortune or World (guess)",
-      "identity_confidence": "uncertain",
-      "review_status": "needs_review",
+      "suggested_identity": "WHEEL",
+      "identity_confidence": "mvp_assigned",
+      "review_status": "ok",
       "source": "assets/source/04_high_value_icons_sheet.jpg",
       "grid": {
         "cols": 6,
@@ -655,15 +673,21 @@
       ],
       "transparency": true,
       "matte": {
-        "near": 14,
+        "near": 16,
         "far": 52,
         "protect_dark": true,
         "protect_lum_max": 100,
         "protect_alpha_floor": 0.95,
-        "despill": 0.35
+        "despill": 0.35,
+        "strip_dark_fringe": true,
+        "fringe_lum_max": 60,
+        "fringe_erode": 2,
+        "dilate_radius": 0,
+        "post_strip_sheet_halo": true
       },
       "sheet": "04_high_value_icons_sheet",
-      "notes": "Tarot/pathway name mapping is a guess; keep needs_review until owner confirms."
+      "notes": "Tarot/pathway name mapping is a guess; keep needs_review until owner confirms. MVP mapped to SymbolId WHEEL.",
+      "game_symbol_id": "WHEEL"
     },
     {
       "id": "hv_icon_r1c5_ruby_pendant",
@@ -682,20 +706,28 @@
       "crop": [
         945,
         8,
-        222,
+        206,
         240
       ],
       "transparency": true,
       "matte": {
-        "near": 14,
-        "far": 52,
+        "near": 18,
+        "far": 55,
         "protect_dark": true,
-        "protect_lum_max": 100,
-        "protect_alpha_floor": 0.95,
-        "despill": 0.35
+        "protect_lum_max": 90,
+        "dilate_radius": 0,
+        "strip_dark_fringe": true,
+        "fringe_erode": 2,
+        "right_edge_mask_px": 22,
+        "despill": 0.25,
+        "feather_px": 0.55,
+        "post_strip_sheet_halo": true,
+        "edge_clear_right": 8,
+        "edge_clear_top": 6
       },
       "sheet": "04_high_value_icons_sheet",
-      "notes": "Tarot/pathway name mapping is a guess; keep needs_review until owner confirms."
+      "notes": "Tarot/pathway name mapping is a guess; keep needs_review until owner confirms.",
+      "game_symbol_id": null
     },
     {
       "id": "hv_icon_r1c6_sun_compass",
@@ -719,23 +751,29 @@
       ],
       "transparency": true,
       "matte": {
-        "near": 14,
+        "near": 16,
         "far": 52,
         "protect_dark": true,
         "protect_lum_max": 100,
         "protect_alpha_floor": 0.95,
-        "despill": 0.35
+        "despill": 0.35,
+        "strip_dark_fringe": true,
+        "fringe_lum_max": 60,
+        "fringe_erode": 2,
+        "dilate_radius": 0,
+        "post_strip_sheet_halo": true
       },
       "sheet": "04_high_value_icons_sheet",
-      "notes": "Tarot/pathway name mapping is a guess; keep needs_review until owner confirms."
+      "notes": "Tarot/pathway name mapping is a guess; keep needs_review until owner confirms.",
+      "game_symbol_id": null
     },
     {
       "id": "hv_icon_r2c1_hanged_figure",
       "category": "symbols/high",
       "identity": "Inverted metallic figure on chains with red aura",
-      "suggested_identity": "Hanged Man (likely)",
-      "identity_confidence": "likely",
-      "review_status": "needs_review",
+      "suggested_identity": "HANGED",
+      "identity_confidence": "mvp_assigned",
+      "review_status": "ok",
       "source": "assets/source/04_high_value_icons_sheet.jpg",
       "grid": {
         "cols": 6,
@@ -751,27 +789,31 @@
       ],
       "transparency": true,
       "matte": {
-        "near": 12,
-        "far": 48,
+        "near": 16,
+        "far": 52,
         "protect_dark": true,
-        "protect_lum_max": 125,
-        "protect_alpha_floor": 0.97,
-        "core_threshold": 0.22,
-        "close_radius": 7,
+        "protect_lum_max": 100,
+        "protect_alpha_floor": 0.95,
+        "close_radius": 4,
         "dilate_radius": 0,
-        "despill": 0.2,
-        "feather_px": 0.5
+        "despill": 0.15,
+        "strip_dark_fringe": true,
+        "fringe_erode": 2,
+        "fringe_contrast_max": 6,
+        "feather_px": 0.5,
+        "post_strip_sheet_halo": true
       },
       "sheet": "04_high_value_icons_sheet",
-      "notes": "Tarot/pathway name mapping is a guess; keep needs_review until owner confirms."
+      "notes": "Tarot/pathway name mapping is a guess; keep needs_review until owner confirms. MVP mapped to SymbolId HANGED.",
+      "game_symbol_id": "HANGED"
     },
     {
       "id": "hv_icon_r2c2_armillary",
       "category": "symbols/high",
       "identity": "Brass armillary sphere with blue core",
-      "suggested_identity": "World (guess)",
-      "identity_confidence": "uncertain",
-      "review_status": "needs_review",
+      "suggested_identity": "WORLD",
+      "identity_confidence": "mvp_assigned",
+      "review_status": "ok",
       "source": "assets/source/04_high_value_icons_sheet.jpg",
       "grid": {
         "cols": 6,
@@ -787,15 +829,20 @@
       ],
       "transparency": true,
       "matte": {
-        "near": 14,
-        "far": 52,
+        "near": 18,
+        "far": 55,
         "protect_dark": true,
-        "protect_lum_max": 100,
-        "protect_alpha_floor": 0.95,
-        "despill": 0.35
+        "protect_lum_max": 85,
+        "dilate_radius": 0,
+        "strip_dark_fringe": true,
+        "fringe_erode": 2,
+        "despill": 0.3,
+        "feather_px": 0.65,
+        "post_strip_sheet_halo": true
       },
       "sheet": "04_high_value_icons_sheet",
-      "notes": "Tarot/pathway name mapping is a guess; keep needs_review until owner confirms."
+      "notes": "Tarot/pathway name mapping is a guess; keep needs_review until owner confirms. MVP mapped to SymbolId WORLD.",
+      "game_symbol_id": "WORLD"
     },
     {
       "id": "hv_icon_r2c3_lantern",
@@ -819,15 +866,22 @@
       ],
       "transparency": true,
       "matte": {
-        "near": 14,
-        "far": 52,
-        "protect_dark": true,
-        "protect_lum_max": 100,
-        "protect_alpha_floor": 0.95,
-        "despill": 0.35
+        "near": 22,
+        "far": 58,
+        "protect_dark": false,
+        "despill": 0.35,
+        "strip_dark_fringe": true,
+        "fringe_erode": 2,
+        "fringe_contrast_max": 8,
+        "left_edge_mask_px": 14,
+        "left_edge_teal_bias": 2,
+        "feather_px": 0.8,
+        "post_strip_sheet_halo": true,
+        "edge_clear_left": 6
       },
       "sheet": "04_high_value_icons_sheet",
-      "notes": "Tarot/pathway name mapping is a guess; keep needs_review until owner confirms."
+      "notes": "Tarot/pathway name mapping is a guess; keep needs_review until owner confirms.",
+      "game_symbol_id": null
     },
     {
       "id": "hv_icon_r2c4_moth",
@@ -851,15 +905,21 @@
       ],
       "transparency": true,
       "matte": {
-        "near": 14,
+        "near": 16,
         "far": 52,
         "protect_dark": true,
         "protect_lum_max": 100,
         "protect_alpha_floor": 0.95,
-        "despill": 0.35
+        "despill": 0.35,
+        "strip_dark_fringe": true,
+        "fringe_lum_max": 60,
+        "fringe_erode": 2,
+        "dilate_radius": 0,
+        "post_strip_sheet_halo": true
       },
       "sheet": "04_high_value_icons_sheet",
-      "notes": "Tarot/pathway name mapping is a guess; keep needs_review until owner confirms."
+      "notes": "Tarot/pathway name mapping is a guess; keep needs_review until owner confirms.",
+      "game_symbol_id": null
     },
     {
       "id": "hv_icon_r2c5_crescent_moon",
@@ -876,22 +936,30 @@
         "row": 1
       },
       "crop": [
-        945,
+        955,
         264,
-        222,
+        202,
         240
       ],
       "transparency": true,
       "matte": {
-        "near": 14,
+        "near": 16,
         "far": 52,
         "protect_dark": true,
-        "protect_lum_max": 100,
-        "protect_alpha_floor": 0.95,
-        "despill": 0.35
+        "dilate_radius": 0,
+        "strip_dark_fringe": true,
+        "fringe_erode": 2,
+        "left_edge_mask_px": 14,
+        "right_edge_mask_px": 14,
+        "left_edge_teal_bias": 1000,
+        "feather_px": 0.6,
+        "post_strip_sheet_halo": true,
+        "edge_clear_left": 8,
+        "edge_clear_right": 8
       },
       "sheet": "04_high_value_icons_sheet",
-      "notes": "Tarot/pathway name mapping is a guess; keep needs_review until owner confirms."
+      "notes": "Tarot/pathway name mapping is a guess; keep needs_review until owner confirms.",
+      "game_symbol_id": null
     },
     {
       "id": "hv_icon_r2c6_radiant_sun",
@@ -915,15 +983,21 @@
       ],
       "transparency": true,
       "matte": {
-        "near": 14,
+        "near": 16,
         "far": 52,
         "protect_dark": true,
         "protect_lum_max": 100,
         "protect_alpha_floor": 0.95,
-        "despill": 0.35
+        "despill": 0.35,
+        "strip_dark_fringe": true,
+        "fringe_lum_max": 60,
+        "fringe_erode": 2,
+        "dilate_radius": 0,
+        "post_strip_sheet_halo": true
       },
       "sheet": "04_high_value_icons_sheet",
-      "notes": "Tarot/pathway name mapping is a guess; keep needs_review until owner confirms."
+      "notes": "Tarot/pathway name mapping is a guess; keep needs_review until owner confirms.",
+      "game_symbol_id": null
     },
     {
       "id": "hv_icon_r3c1_crown",
@@ -947,15 +1021,21 @@
       ],
       "transparency": true,
       "matte": {
-        "near": 14,
+        "near": 16,
         "far": 52,
         "protect_dark": true,
         "protect_lum_max": 100,
         "protect_alpha_floor": 0.95,
-        "despill": 0.35
+        "despill": 0.35,
+        "strip_dark_fringe": true,
+        "fringe_lum_max": 60,
+        "fringe_erode": 2,
+        "dilate_radius": 0,
+        "post_strip_sheet_halo": true
       },
       "sheet": "04_high_value_icons_sheet",
-      "notes": "Tarot/pathway name mapping is a guess; keep needs_review until owner confirms."
+      "notes": "Tarot/pathway name mapping is a guess; keep needs_review until owner confirms.",
+      "game_symbol_id": null
     },
     {
       "id": "hv_icon_r3c2_rose",
@@ -972,22 +1052,31 @@
         "row": 2
       },
       "crop": [
-        241,
+        255,
         520,
-        222,
+        208,
         240
       ],
       "transparency": true,
       "matte": {
-        "near": 14,
-        "far": 52,
+        "near": 18,
+        "far": 55,
         "protect_dark": true,
-        "protect_lum_max": 100,
-        "protect_alpha_floor": 0.95,
-        "despill": 0.35
+        "protect_lum_max": 75,
+        "dilate_radius": 0,
+        "strip_dark_fringe": true,
+        "fringe_erode": 2,
+        "left_edge_mask_px": 22,
+        "left_edge_teal_bias": 1000,
+        "despill": 0.3,
+        "feather_px": 0.6,
+        "post_strip_sheet_halo": true,
+        "edge_clear_left": 8,
+        "edge_clear_right": 8
       },
       "sheet": "04_high_value_icons_sheet",
-      "notes": "Tarot/pathway name mapping is a guess; keep needs_review until owner confirms."
+      "notes": "Tarot/pathway name mapping is a guess; keep needs_review until owner confirms.",
+      "game_symbol_id": null
     },
     {
       "id": "hv_icon_r3c3_tower",
@@ -1011,15 +1100,21 @@
       ],
       "transparency": true,
       "matte": {
-        "near": 12,
+        "near": 16,
         "far": 62,
         "protect_dark": true,
         "protect_lum_max": 100,
         "protect_alpha_floor": 0.95,
-        "despill": 0.35
+        "despill": 0.35,
+        "strip_dark_fringe": true,
+        "fringe_lum_max": 60,
+        "fringe_erode": 2,
+        "dilate_radius": 0,
+        "post_strip_sheet_halo": true
       },
       "sheet": "04_high_value_icons_sheet",
-      "notes": "Tarot/pathway name mapping is a guess; keep needs_review until owner confirms."
+      "notes": "Tarot/pathway name mapping is a guess; keep needs_review until owner confirms.",
+      "game_symbol_id": null
     },
     {
       "id": "hv_icon_r3c4_bell",
@@ -1038,20 +1133,27 @@
       "crop": [
         710,
         520,
-        223,
+        207,
         240
       ],
       "transparency": true,
       "matte": {
-        "near": 14,
-        "far": 52,
+        "near": 16,
+        "far": 58,
         "protect_dark": true,
-        "protect_lum_max": 100,
-        "protect_alpha_floor": 0.95,
-        "despill": 0.35
+        "protect_lum_max": 85,
+        "dilate_radius": 0,
+        "strip_dark_fringe": true,
+        "fringe_erode": 2,
+        "right_edge_mask_px": 22,
+        "feather_px": 0.75,
+        "despill": 0.3,
+        "post_strip_sheet_halo": true,
+        "edge_clear_right": 8
       },
       "sheet": "04_high_value_icons_sheet",
-      "notes": "Tarot/pathway name mapping is a guess; keep needs_review until owner confirms."
+      "notes": "Tarot/pathway name mapping is a guess; keep needs_review until owner confirms.",
+      "game_symbol_id": null
     },
     {
       "id": "hv_icon_r3c5_flaming_wheel",
@@ -1075,23 +1177,29 @@
       ],
       "transparency": true,
       "matte": {
-        "near": 12,
+        "near": 16,
         "far": 62,
         "protect_dark": true,
         "protect_lum_max": 100,
         "protect_alpha_floor": 0.95,
-        "despill": 0.35
+        "despill": 0.35,
+        "strip_dark_fringe": true,
+        "fringe_lum_max": 60,
+        "fringe_erode": 2,
+        "dilate_radius": 0,
+        "post_strip_sheet_halo": true
       },
       "sheet": "04_high_value_icons_sheet",
-      "notes": "Tarot/pathway name mapping is a guess; keep needs_review until owner confirms."
+      "notes": "Tarot/pathway name mapping is a guess; keep needs_review until owner confirms.",
+      "game_symbol_id": null
     },
     {
       "id": "hv_icon_r3c6_star",
       "category": "symbols/high",
       "identity": "Multi-point glowing star",
-      "suggested_identity": "Star or Fool (guess)",
-      "identity_confidence": "uncertain",
-      "review_status": "needs_review",
+      "suggested_identity": "FOOL",
+      "identity_confidence": "mvp_assigned",
+      "review_status": "ok",
       "source": "assets/source/04_high_value_icons_sheet.jpg",
       "grid": {
         "cols": 6,
@@ -1107,15 +1215,21 @@
       ],
       "transparency": true,
       "matte": {
-        "near": 14,
+        "near": 16,
         "far": 52,
         "protect_dark": true,
         "protect_lum_max": 100,
         "protect_alpha_floor": 0.95,
-        "despill": 0.35
+        "despill": 0.35,
+        "strip_dark_fringe": true,
+        "fringe_lum_max": 60,
+        "fringe_erode": 2,
+        "dilate_radius": 0,
+        "post_strip_sheet_halo": true
       },
       "sheet": "04_high_value_icons_sheet",
-      "notes": "Tarot/pathway name mapping is a guess; keep needs_review until owner confirms."
+      "notes": "Tarot/pathway name mapping is a guess; keep needs_review until owner confirms. MVP mapped to SymbolId FOOL.",
+      "game_symbol_id": "FOOL"
     },
     {
       "id": "bg_gothic_library",
@@ -1417,5 +1531,17 @@
       },
       "notes": "Thin filigree; verify no clipping / leftover sheet texture."
     }
-  ]
+  ],
+  "symbol_mapping_mvp": {
+    "version": 1,
+    "note": "Owner-authorized MVP assignment of 6 cleanest HV icons to high-value SymbolIds. Not integrated into game yet.",
+    "mapping": {
+      "FOOL": "hv_icon_r3c6_star",
+      "MAGICIAN": "hv_icon_r1c2_staff",
+      "PRIESTESS": "hv_icon_r1c3_mirror",
+      "WHEEL": "hv_icon_r1c4_zodiac_disk",
+      "HANGED": "hv_icon_r2c1_hanged_figure",
+      "WORLD": "hv_icon_r2c2_armillary"
+    }
+  }
 }

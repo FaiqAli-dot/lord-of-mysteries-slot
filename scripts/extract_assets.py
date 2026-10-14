@@ -25,6 +25,7 @@ from pathlib import Path
 from typing import Any
 
 import numpy as np
+from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -71,6 +72,14 @@ def _morph_dilate(mask: np.ndarray, radius: int) -> np.ndarray:
     return np.asarray(img) > 127
 
 
+def _morph_erode(mask: np.ndarray, radius: int) -> np.ndarray:
+    if radius <= 0:
+        return mask
+    img = Image.fromarray((mask.astype(np.uint8) * 255), mode="L")
+    img = img.filter(ImageFilter.MinFilter(size=radius * 2 + 1))
+    return np.asarray(img) > 127
+
+
 def color_distance_soft_matte(
     rgb: np.ndarray,
     *,
@@ -89,6 +98,11 @@ def color_distance_soft_matte(
     left_edge_mask_px: int = 0,
     left_edge_teal_bias: float = 12.0,
     right_edge_fade_px: int = 0,
+    right_edge_mask_px: int = 0,
+    strip_dark_fringe: bool = False,
+    fringe_lum_max: float = 70.0,
+    fringe_erode: int = 3,
+    fringe_contrast_max: float = 6.0,
 ) -> Image.Image:
     """
     Soft alpha from Euclidean RGB distance to sampled sheet background.
@@ -151,6 +165,8 @@ def color_distance_soft_matte(
         hard = edge_kill[:, :hard_w]
         alpha[:, :hard_w] = np.where(hard, 0.0, alpha[:, :hard_w])
         alpha[:, :w] *= np.clip(1.0 - factor, 0.0, 1.0)
+        # Always clear the outermost columns in a masked left strip (neighbor slivers).
+        alpha[:, : min(5, w)] = 0.0
         # Neutralize residual cyan cast on surviving left-edge pixels (baked neighbor light).
         cast = (teal > left_edge_teal_bias) & (rch < 140)
         if np.any(cast):
@@ -165,6 +181,40 @@ def color_distance_soft_matte(
         w = min(right_edge_fade_px, rgb.shape[1])
         fade = np.linspace(1.0, 0.0, w, dtype=np.float32)[None, :]
         alpha[:, -w:] *= fade
+
+    if right_edge_mask_px and right_edge_mask_px > 0:
+        w = min(right_edge_mask_px, rgb.shape[1])
+        # Kill near-bg / weak content along the right crop edge (neighbor slivers).
+        strip = dist[:, -w:] < (near + far) * 0.55
+        # Also kill isolated bright tips that are only in the outer strip and not connected to strong core.
+        falloff = np.linspace(0.1, 1.0, w, dtype=np.float32)[None, :]
+        alpha[:, -w:] = np.where(strip, alpha[:, -w:] * falloff * 0.15, alpha[:, -w:])
+        hard_w = min(8, w)
+        alpha[:, -hard_w:] = np.where(strip[:, -hard_w:], 0.0, alpha[:, -hard_w:])
+        alpha[:, -min(5, w):] = 0.0
+
+    if strip_dark_fringe:
+        # Remove blocky sheet-halo: pixels that still look like the JPG background
+        # outside a tight object core. Key on color-distance to bg (not all darks),
+        # so intentional black silhouettes inside the object survive.
+        local = Image.fromarray(lum.astype(np.uint8), mode="L")
+        blur = np.asarray(local.filter(ImageFilter.GaussianBlur(radius=2))).astype(np.float32)
+        contrast = np.abs(lum - blur)
+        # Core = clearly non-background content (strong distance or bright/saturated).
+        chroma = np.max(rgb_f, axis=2) - np.min(rgb_f, axis=2)
+        core = (dist > (near + far) * 0.55) | (chroma > 28) | (lum > bg_lum + 35)
+        core = _morph_close(core, 3)
+        keep = _morph_dilate(core, 1)
+        keep_inner = _morph_erode(core, fringe_erode) if fringe_erode > 0 else core
+        # Sheet fringe: outside keep, still close to bg color, low local structure.
+        sheet_like = dist < (near + far) * 0.48
+        fringe = (~keep) & (alpha > 0.05) & sheet_like
+        # Soft mid-ring that is still sheet-like and flat.
+        soft_fringe = (~keep_inner) & (~core) & (alpha > 0.05) & sheet_like & (contrast < fringe_contrast_max + 2)
+        alpha = np.where(fringe | soft_fringe, 0.0, alpha)
+        # Any remaining outer sheet-like rim: collapse opacity.
+        rim = (~keep_inner) & (alpha > 0.05) & (dist < (near + far) * 0.62) & (contrast < fringe_contrast_max + 4)
+        alpha = np.where(rim, alpha * 0.2, alpha)
 
     if feather_px and feather_px > 0:
         a_img = Image.fromarray((alpha * 255).astype(np.uint8), mode="L")
@@ -191,6 +241,39 @@ def color_distance_soft_matte(
 
     out[..., 3] = alpha * 255.0
     return Image.fromarray(out.astype(np.uint8), mode="RGBA")
+
+
+def strip_sheet_halo_post(
+    rgba_img: Image.Image,
+    *,
+    edge_clear_left: int = 0,
+    edge_clear_right: int = 0,
+    edge_clear_top: int = 0,
+) -> Image.Image:
+    """Second-pass removal of leftover JPG sheet halo / neighbor-edge slivers."""
+    arr = np.asarray(rgba_img).astype(np.float32)
+    rgb, a = arr[..., :3], arr[..., 3]
+    # Approximate sheet bg from current transparent-adjacent dark pixels, else corners.
+    bg = sample_bg_color(rgb, 2, 8)
+    dist = np.linalg.norm(rgb - bg, axis=2)
+    chroma = rgb.max(axis=2) - rgb.min(axis=2)
+    lum = 0.2126 * rgb[..., 0] + 0.7152 * rgb[..., 1] + 0.0722 * rgb[..., 2]
+    content = (dist > 48) | (chroma > 32) | (lum > 90)
+    content_i = Image.fromarray((content.astype(np.uint8) * 255), mode="L")
+    content = np.asarray(content_i.filter(ImageFilter.MaxFilter(5))) > 127
+    content = np.asarray(Image.fromarray((content.astype(np.uint8) * 255), mode="L").filter(ImageFilter.MinFilter(3))) > 127
+    keep = np.asarray(Image.fromarray((content.astype(np.uint8) * 255), mode="L").filter(ImageFilter.MaxFilter(3))) > 127
+    kill = (a > 0) & (~keep) & (dist < 55)
+    a = np.where(kill, 0.0, a)
+    rim = (a > 0) & (~content) & (dist < 65)
+    a = np.where(rim, a * 0.25, a)
+    if edge_clear_left:
+        a[:, : min(edge_clear_left, a.shape[1])] = 0
+    if edge_clear_right:
+        a[:, -min(edge_clear_right, a.shape[1]) :] = 0
+    if edge_clear_top:
+        a[: min(edge_clear_top, a.shape[0]), :] = 0
+    return Image.fromarray(np.dstack([rgb, a]).astype(np.uint8), mode="RGBA")
 
 
 def kill_left_cyan_cast(rgba_img: Image.Image, zone_frac: float = 0.38) -> Image.Image:
@@ -283,11 +366,24 @@ def extract_one(asset: dict[str, Any], defaults: dict[str, Any], out_dir: Path) 
             left_edge_mask_px=int(matte_cfg.get("left_edge_mask_px", 0)),
             left_edge_teal_bias=float(matte_cfg.get("left_edge_teal_bias", 12.0)),
             right_edge_fade_px=int(matte_cfg.get("right_edge_fade_px", 0)),
+            right_edge_mask_px=int(matte_cfg.get("right_edge_mask_px", 0)),
+            strip_dark_fringe=bool(matte_cfg.get("strip_dark_fringe", False)),
+            fringe_lum_max=float(matte_cfg.get("fringe_lum_max", 70)),
+            fringe_erode=int(matte_cfg.get("fringe_erode", 3)),
+            fringe_contrast_max=float(matte_cfg.get("fringe_contrast_max", 6.0)),
         )
         method_used = "color_distance_soft"
         if bool(matte_cfg.get("post_kill_left_cyan", False)):
             rgba = kill_left_cyan_cast(rgba, zone_frac=float(matte_cfg.get("cyan_zone_frac", 0.38)))
             method_used += "+cyan_kill"
+        if bool(matte_cfg.get("post_strip_sheet_halo", False)):
+            rgba = strip_sheet_halo_post(
+                rgba,
+                edge_clear_left=int(matte_cfg.get("edge_clear_left", 0)),
+                edge_clear_right=int(matte_cfg.get("edge_clear_right", 0)),
+                edge_clear_top=int(matte_cfg.get("edge_clear_top", 0)),
+            )
+            method_used += "+sheet_halo"
     elif method == "none":
         rgba = crop.convert("RGBA")
         method_used = "none"
@@ -310,6 +406,7 @@ def extract_one(asset: dict[str, Any], defaults: dict[str, Any], out_dir: Path) 
         "identity": asset.get("identity"),
         "suggested_identity": asset.get("suggested_identity"),
         "identity_confidence": asset.get("identity_confidence"),
+        "game_symbol_id": asset.get("game_symbol_id"),
         "review_status": asset.get("review_status", "needs_review"),
         "notes": asset.get("notes"),
     }
