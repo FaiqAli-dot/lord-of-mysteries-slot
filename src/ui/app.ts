@@ -210,7 +210,8 @@ export class GameApp {
   private pushStateToPixi(): void {
     const s = this.session.state;
     if (!s) return;
-    this.stage.setGrid(s.grid as SymbolId[][]);
+    // During busy spins, playDropToGrid owns symbol textures (old stay until drop-out).
+    if (!this.busy) this.stage.setGrid(s.grid as SymbolId[][]);
     this.stage.setMeters(s);
   }
 

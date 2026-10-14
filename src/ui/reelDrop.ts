@@ -155,7 +155,7 @@ export function playReelDrop(opts: {
             const inTl = gsap.timeline({ onComplete: () => resolveCol() });
             for (const c of colCells) {
               inTl.fromTo(
-                c.sprite,
+                c.sprite.position,
                 { y: c.homeY - gridFall },
                 {
                   y: c.homeY,
@@ -170,8 +170,9 @@ export function playReelDrop(opts: {
         });
 
         for (const c of colCells) {
+          // Tween position.y (Pixi DisplayObject) — reliable without PixiPlugin.
           outTl.to(
-            c.sprite,
+            c.sprite.position,
             {
               y: c.homeY + gridFall,
               duration: fallOut,
