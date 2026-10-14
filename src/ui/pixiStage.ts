@@ -14,6 +14,7 @@ import { GAME_CONFIG, type SymbolId } from '../config/gameConfig';
 import { sequenceProgress } from '../engine/sequence';
 import type { GameState } from '../engine/types';
 import { designSize, detectLayout, type LayoutKind } from './sizeConfig';
+import { playReelDrop, type DropMode } from './reelDrop';
 
 const SYMBOL_PATH: Record<SymbolId, string> = {
   FOOL: 'symbols/high/hv_icon_r3c6_star.png',
@@ -93,6 +94,9 @@ export class PixiStage {
   private logo!: Text;
   private reelFrame!: Graphics;
   private cells: Sprite[][] = [];
+  private cellHome: { x: number; y: number }[][] = [];
+  private cellStepH = 140;
+  private dropping = false;
   private seqMeter!: Sprite;
   private spiritMeter!: Sprite;
   private seqFill = new Graphics();
@@ -340,13 +344,16 @@ export class PixiStage {
     this.reelFrame.drawRoundedRect(ox - 16, oy - 16, gridW * scale + 32, gridH * scale + 32, 12);
     this.reelFrame.endFill();
 
+    this.cellStepH = (cellH + gapY) * scale;
+    this.cellHome = [];
     for (let r = 0; r < GAME_CONFIG.reels; r++) {
+      this.cellHome[r] = [];
       for (let row = 0; row < GAME_CONFIG.rows; row++) {
         const s = this.cells[r][row]!;
-        s.position.set(
-          ox + (r * (cellW + gapX) + cellW / 2) * scale,
-          oy + (row * (cellH + gapY) + cellH / 2) * scale,
-        );
+        const x = ox + (r * (cellW + gapX) + cellW / 2) * scale;
+        const y = oy + (row * (cellH + gapY) + cellH / 2) * scale;
+        this.cellHome[r]![row] = { x, y };
+        if (!this.dropping) s.position.set(x, y);
         this.fitCell(s, cellW * scale * 0.9, cellH * scale * 0.9);
       }
     }
@@ -390,8 +397,44 @@ export class PixiStage {
         s.texture = Texture.from(assetUrl(SYMBOL_PATH[id]));
         const L = LAYOUT[this.layoutKind].reel;
         this.fitCell(s, L.cellW * L.scale * 0.9, L.cellH * L.scale * 0.9);
+        const home = this.cellHome[r]?.[row];
+        if (home && !this.dropping) s.position.set(home.x, home.y);
       }
     }
+  }
+
+  /**
+   * Falling/drop transition after spin result arrives (config-driven via reelDrop.json).
+   * Purely visual — `grid` is already the resolved outcome.
+   */
+  async playDropToGrid(grid: SymbolId[][], mode: DropMode = 'normal'): Promise<void> {
+    if (!this.cells.length) {
+      this.setGrid(grid);
+      return;
+    }
+    this.dropping = true;
+    const cells: {
+      sprite: Sprite;
+      homeX: number;
+      homeY: number;
+      reel: number;
+      row: number;
+    }[] = [];
+    for (let r = 0; r < GAME_CONFIG.reels; r++) {
+      for (let row = 0; row < GAME_CONFIG.rows; row++) {
+        const sprite = this.cells[r]![row]!;
+        const home = this.cellHome[r]?.[row] ?? { x: sprite.x, y: sprite.y };
+        cells.push({ sprite, homeX: home.x, homeY: home.y, reel: r, row });
+      }
+    }
+    await playReelDrop({
+      cells,
+      cellHeight: this.cellStepH,
+      mode,
+      reducedMotion: this.reducedMotion,
+      applyTextures: () => this.setGrid(grid),
+    });
+    this.dropping = false;
   }
 
   setMeters(state: GameState | null): void {
@@ -422,30 +465,19 @@ export class PixiStage {
     g.endFill();
   }
 
+  /** @deprecated Drop animation runs after result via playDropToGrid */
   startSpinMotion(): void {
-    const L = LAYOUT[this.layoutKind].reel;
-    for (let r = 0; r < GAME_CONFIG.reels; r++) {
-      for (let row = 0; row < GAME_CONFIG.rows; row++) {
-        const s = this.cells[r][row]!;
-        const baseY = s.y;
-        gsap.killTweensOf(s);
-        gsap.to(s, {
-          y: baseY + 14,
-          duration: 0.07,
-          yoyo: true,
-          repeat: 8 + r,
-          ease: 'sine.inOut',
-          onComplete: () => {
-            s.y = baseY;
-          },
-        });
-      }
-    }
-    void L;
+    /* no pre-result strip spin — drop is result-driven */
   }
 
   stopSpinMotion(): void {
-    /* tweens complete on their own */
+    /* no-op */
+  }
+
+  dropModeForTurbo(turbo: 0 | 1 | 2, slam: boolean): DropMode {
+    if (slam || turbo >= 2) return 'turbo';
+    if (turbo === 1) return 'quick';
+    return 'normal';
   }
 
   showWinCelebration(amount: number): void {

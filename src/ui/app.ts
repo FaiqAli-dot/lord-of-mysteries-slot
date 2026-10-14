@@ -1,7 +1,6 @@
 import { GAME_CONFIG, type BonusModeId } from '../config/gameConfig';
 import { SoftAudio } from './audio';
 import { createSession, type GameSession } from '../api/session';
-import type { GameState } from '../engine/types';
 import { PixiStage } from './pixiStage';
 import {
   bindPluginEvents,
@@ -225,23 +224,6 @@ export class GameApp {
     }
   }
 
-  private spinDelayMs(s: GameState): number {
-    if (s.reducedMotion) return 80;
-    if (this.turbo === 2) return 120;
-    if (this.turbo === 1) return Math.floor(GAME_CONFIG.animation.spinMs * 0.45);
-    return GAME_CONFIG.animation.spinMs;
-  }
-
-  private async waitSpin(ms: number): Promise<void> {
-    this.skipSpin = false;
-    const step = 40;
-    let left = ms;
-    while (left > 0 && !this.skipSpin) {
-      await new Promise((r) => setTimeout(r, Math.min(step, left)));
-      left -= step;
-    }
-  }
-
   private async onSpin(): Promise<void> {
     if (this.busy || this.session.status !== 'ready') return;
     const s = this.session.state;
@@ -261,17 +243,22 @@ export class GameApp {
     if (s.phase === 'BONUS_ACTIVE' && s.bonus) {
       if (s.bonus.mode === 'TAROT_CLUB') return;
       this.busy = true;
+      this.skipSpin = false;
       spinActive(true);
-      this.stage.startSpinMotion();
       this.audio.spin();
-      await this.waitSpin(this.spinDelayMs(s));
       try {
         await this.session.bonusSpin();
+        const grid = this.session.state?.grid as SymbolId[][] | undefined;
+        if (grid) {
+          await this.stage.playDropToGrid(
+            grid,
+            this.stage.dropModeForTurbo(this.turbo, this.skipSpin),
+          );
+        }
         this.afterResult();
       } catch (e) {
         this.statusMessage = e instanceof Error ? e.message : String(e);
       }
-      this.stage.stopSpinMotion();
       spinActive(false);
       this.busy = false;
       if (this.session.state?.phase === 'BONUS_SUMMARY') this.modal = 'bonusSummary';
@@ -289,14 +276,21 @@ export class GameApp {
     }
 
     this.busy = true;
+    this.skipSpin = false;
     setWinText(0);
     spinActive(true);
     setSpinEnabled(false);
-    this.stage.startSpinMotion();
     this.audio.spin();
-    await this.waitSpin(this.spinDelayMs(s));
     try {
+      // Result first — drop-out/drop-in is purely visual after the outcome exists.
       await this.session.spin();
+      const grid = this.session.state?.grid as SymbolId[][] | undefined;
+      if (grid) {
+        await this.stage.playDropToGrid(
+          grid,
+          this.stage.dropModeForTurbo(this.turbo, this.skipSpin),
+        );
+      }
       this.afterResult();
       const phase = this.session.state?.phase;
       if (phase === 'BONUS_SELECT') {
@@ -310,7 +304,6 @@ export class GameApp {
     } catch (e) {
       this.statusMessage = e instanceof Error ? e.message : String(e);
     }
-    this.stage.stopSpinMotion();
     spinActive(false);
     this.busy = false;
     this.pushStateToPlugin();

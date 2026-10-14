@@ -1,0 +1,33 @@
+{
+  "_comment": "Space Fortune–style falling/drop reel timings. Visual only — no cascade/math. Tuned from REEL_DROP_ANIMATION.md when available.",
+  "grid": {
+    "reels": 5,
+    "rows": 4
+  },
+  "dropOut": {
+    "duration": 0.5,
+    "ease": "power2.in",
+    "coeff": 0.5,
+    "staggerPerColumn": 0.07,
+    "distanceInCellHeights": 1
+  },
+  "dropIn": {
+    "duration": 0.8,
+    "ease": "elastic.out(1,1)",
+    "coeff": 0.3,
+    "staggerPerColumn": 0.07,
+    "distanceInCellHeights": 1
+  },
+  "stagger": {
+    "rowOrder": "bottom-first",
+    "rowStaggerScale": 1
+  },
+  "quickSpin": {
+    "durationScale": 0.55,
+    "keepStagger": true
+  },
+  "turboOrSlam": {
+    "zeroStagger": true,
+    "clampDuration": 0.2
+  }
+}
