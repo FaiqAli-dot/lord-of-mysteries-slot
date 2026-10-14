@@ -2,37 +2,39 @@ import { GAME_CONFIG, type BonusModeId } from '../config/gameConfig';
 import { SoftAudio } from './audio';
 import { createSession, type GameSession } from '../api/session';
 import type { GameState } from '../engine/types';
-import { CanvasStage } from './canvasStage';
+import { PixiStage } from './pixiStage';
 import {
-  applyPluginMode,
   bindPluginEvents,
   initPluginHud,
+  resizeExternalUi,
   setAutoplayActive,
   setBalanceText,
   setBetText,
   setSoundToggles,
   setSpinEnabled,
-  setSpinningUi,
   setTurboLevel,
   setWinText,
   showPaytableInPlugin,
-  waitForPlugin,
+  spinActive,
+  updateBetButtons,
+  waitForHostUi,
 } from './pluginBridge';
+import type { SymbolId } from '../config/gameConfig';
 
 type ModalId = 'none' | 'bonusSelect' | 'bonusSummary';
 
 /**
- * Canvas game stage + Ninja ui-plugin HUD bridge.
- * Plugin owns spin/bet/balance/win/autoplay/turbo/sound/paytable chrome.
+ * Pixi game stage + Ninja ui-plugin host chrome (per UI_PLUGIN_INTEGRATION.md).
  */
 export class GameApp {
   private root: HTMLElement;
   private session: GameSession;
   private unsub: (() => void) | null = null;
   private audio = new SoftAudio();
-  private stage!: CanvasStage;
+  private stage!: PixiStage;
   private overlay!: HTMLElement;
   private modal: ModalId = 'none';
+  private ready = false;
   private busy = false;
   private skipSpin = false;
   private turbo: 0 | 1 | 2 = 0;
@@ -40,6 +42,7 @@ export class GameApp {
   private musicOn = true;
   private soundOn = true;
   private statusMessage = '';
+  private openPopups = 0;
 
   constructor(root: HTMLElement) {
     this.root = root;
@@ -58,7 +61,6 @@ export class GameApp {
     return this.session;
   }
 
-  /** QA / screenshot helpers */
   showBonusSelect(): void {
     this.modal = 'bonusSelect';
     this.renderOverlay();
@@ -72,23 +74,25 @@ export class GameApp {
   private mountShell(): void {
     this.root.innerHTML = `
       <div class="demo-banner">${GAME_CONFIG.demoLabel}</div>
-      <div class="pixi-shell">
-        <canvas id="game-canvas" aria-label="Game stage"></canvas>
+      <div class="game-shell">
+        <canvas id="game-canvas"></canvas>
         <div id="game-overlay" class="game-overlay"></div>
       </div>
     `;
     const canvas = this.root.querySelector<HTMLCanvasElement>('#game-canvas');
     const overlay = this.root.querySelector<HTMLElement>('#game-overlay');
     if (!canvas || !overlay) throw new Error('shell missing');
-    this.stage = new CanvasStage(canvas);
+    this.stage = new PixiStage(canvas);
     this.overlay = overlay;
   }
 
   private wireSession(): void {
     this.unsub?.();
     this.unsub = this.session.subscribe(() => {
+      if (!this.ready) return;
       if (this.session.state?.muted !== undefined) this.audio.setMuted(this.session.state.muted);
-      this.syncPluginMeters();
+      this.pushStateToPlugin();
+      this.pushStateToPixi();
       this.renderOverlay();
     });
   }
@@ -97,21 +101,27 @@ export class GameApp {
     this.statusMessage = 'Loading…';
     this.renderOverlay();
     try {
-      await this.stage.load();
-      this.stage.resize();
-      window.addEventListener('resize', () => {
-        this.stage.resize();
-        applyPluginMode();
-      });
-      await waitForPlugin();
-      initPluginHud();
+      await this.stage.init();
+      // 1) wait vueReady  2) setGameConfig  3) setMode  4) show
+      await waitForHostUi(3000);
+      initPluginHud('en');
       bindPluginEvents({
         onSpin: () => void this.onSpin(),
         onSpinStop: () => {
           this.skipSpin = true;
         },
-        onBetUp: () => void this.session.adjustBet(1),
-        onBetDown: () => void this.session.adjustBet(-1),
+        onBetUp: () => void this.onBet(1),
+        onBetDown: () => void this.onBet(-1),
+        onMaxBet: () => {
+          const levels = GAME_CONFIG.betOptions;
+          const max = levels[levels.length - 1]!;
+          const s = this.session.state;
+          if (!s) return;
+          while ((this.session.state?.bet ?? 0) < max) {
+            void this.session.adjustBet(1);
+            if ((this.session.state?.bet ?? 0) >= max) break;
+          }
+        },
         onAutoplayStart: (n) => {
           this.autoLeft = n;
           setAutoplayActive(true, this.autoLeft);
@@ -125,6 +135,10 @@ export class GameApp {
           this.turbo = ((this.turbo + 1) % 3) as 0 | 1 | 2;
           setTurboLevel(this.turbo);
         },
+        onTurboToggle: (on) => {
+          this.turbo = on ? 1 : 0;
+          setTurboLevel(this.turbo);
+        },
         onSoundToggle: (kind, on) => {
           if (kind === 'music') this.musicOn = on;
           if (kind === 'sound') this.soundOn = on;
@@ -133,18 +147,36 @@ export class GameApp {
           this.audio.setMuted(muted);
           setSoundToggles(this.musicOn, this.soundOn);
         },
+        onSoundVolume: (v) => {
+          this.audio.setMuted(v <= 0);
+        },
         onPaytable: () => showPaytableInPlugin(),
+        onPopupStatus: (_popup, isOpen) => {
+          this.openPopups += isOpen ? 1 : -1;
+          if (this.openPopups < 0) this.openPopups = 0;
+          this.stage.setInteractive(this.openPopups === 0);
+        },
       });
+
+      window.addEventListener('resize', () => this.onResize());
+      window.addEventListener('orientationchange', () => this.onResize());
+      window.visualViewport?.addEventListener('resize', () => this.onResize());
+
       setTurboLevel(0);
       setSoundToggles(true, true);
 
       await this.session.connect();
+      this.ready = true;
       this.statusMessage = this.session.api.base
         ? `API ${this.session.api.base}`
         : 'Client-side demo (no API)';
       this.audio.setMuted(this.session.state?.muted ?? false);
-      this.syncPluginMeters();
-      this.startDrawLoop();
+      this.onResize();
+      this.pushStateToPlugin();
+      this.pushStateToPixi();
+      // Bet push race safety (SF emits update-bet multiple times)
+      setBetText(this.session.state?.bet ?? GAME_CONFIG.defaultBet);
+      setBetText(this.session.state?.bet ?? GAME_CONFIG.defaultBet);
       this.renderOverlay();
     } catch (e) {
       this.statusMessage = e instanceof Error ? e.message : String(e);
@@ -153,22 +185,44 @@ export class GameApp {
     }
   }
 
-  private startDrawLoop(): void {
-    const loop = () => {
-      this.stage.draw(this.session.state);
-      requestAnimationFrame(loop);
-    };
-    requestAnimationFrame(loop);
+  private onResize(): void {
+    const kind = this.stage.onResize();
+    resizeExternalUi(kind);
   }
 
-  private syncPluginMeters(): void {
+  private pushStateToPlugin(): void {
     const s = this.session.state;
     if (!s) return;
     setBalanceText(s.balance);
     setBetText(s.bet);
     setWinText(s.lastPayout ?? 0);
-    const can = !this.busy && this.session.status === 'ready' && this.session.canSpin();
-    setSpinEnabled(can || s.phase === 'BONUS_ACTIVE' || s.phase === 'BONUS_SELECT' || s.phase === 'BONUS_SUMMARY');
+    const levels = GAME_CONFIG.betOptions;
+    updateBetButtons(s.bet, levels[0]!, levels[levels.length - 1]!);
+    const can =
+      !this.busy &&
+      this.session.status === 'ready' &&
+      (this.session.canSpin() ||
+        s.phase === 'BONUS_ACTIVE' ||
+        s.phase === 'BONUS_SELECT' ||
+        s.phase === 'BONUS_SUMMARY');
+    setSpinEnabled(can);
+  }
+
+  private pushStateToPixi(): void {
+    const s = this.session.state;
+    if (!s) return;
+    this.stage.setGrid(s.grid as SymbolId[][]);
+    this.stage.setMeters(s);
+  }
+
+  private async onBet(dir: 1 | -1): Promise<void> {
+    await this.session.adjustBet(dir);
+    // Open bet popup like SF on ± toolbar
+    try {
+      window.externalUi?.call?.('ui-bet-popup', 'show');
+    } catch {
+      /* optional */
+    }
   }
 
   private spinDelayMs(s: GameState): number {
@@ -207,7 +261,7 @@ export class GameApp {
     if (s.phase === 'BONUS_ACTIVE' && s.bonus) {
       if (s.bonus.mode === 'TAROT_CLUB') return;
       this.busy = true;
-      setSpinningUi(true);
+      spinActive(true);
       this.stage.startSpinMotion();
       this.audio.spin();
       await this.waitSpin(this.spinDelayMs(s));
@@ -218,10 +272,11 @@ export class GameApp {
         this.statusMessage = e instanceof Error ? e.message : String(e);
       }
       this.stage.stopSpinMotion();
-      setSpinningUi(false);
+      spinActive(false);
       this.busy = false;
       if (this.session.state?.phase === 'BONUS_SUMMARY') this.modal = 'bonusSummary';
-      this.syncPluginMeters();
+      this.pushStateToPlugin();
+      this.pushStateToPixi();
       this.renderOverlay();
       this.continueAutoplay();
       return;
@@ -235,7 +290,7 @@ export class GameApp {
 
     this.busy = true;
     setWinText(0);
-    setSpinningUi(true);
+    spinActive(true);
     setSpinEnabled(false);
     this.stage.startSpinMotion();
     this.audio.spin();
@@ -256,9 +311,10 @@ export class GameApp {
       this.statusMessage = e instanceof Error ? e.message : String(e);
     }
     this.stage.stopSpinMotion();
-    setSpinningUi(false);
+    spinActive(false);
     this.busy = false;
-    this.syncPluginMeters();
+    this.pushStateToPlugin();
+    this.pushStateToPixi();
     this.renderOverlay();
     this.continueAutoplay();
   }
@@ -283,7 +339,10 @@ export class GameApp {
     if (!s) return;
     const payout = s.lastPayout ?? 0;
     setWinText(payout);
-    if (payout > 0) this.audio.win(payout >= s.bet * 10);
+    if (payout > 0) {
+      this.audio.win(payout >= s.bet * 10);
+      if (payout >= s.bet * 15) this.stage.showWinCelebration(payout);
+    }
   }
 
   private async selectBonus(mode: BonusModeId): Promise<void> {
@@ -294,7 +353,8 @@ export class GameApp {
     } catch (e) {
       this.statusMessage = e instanceof Error ? e.message : String(e);
     }
-    this.syncPluginMeters();
+    this.pushStateToPlugin();
+    this.pushStateToPixi();
     this.renderOverlay();
   }
 
@@ -309,7 +369,8 @@ export class GameApp {
       this.statusMessage = e instanceof Error ? e.message : String(e);
     }
     this.busy = false;
-    this.syncPluginMeters();
+    this.pushStateToPlugin();
+    this.pushStateToPixi();
     this.renderOverlay();
   }
 
@@ -362,7 +423,7 @@ export class GameApp {
       this.overlay.querySelector('[data-ack]')?.addEventListener('click', () => {
         void this.session.acknowledgeBonusSummary().then(() => {
           this.modal = 'none';
-          this.syncPluginMeters();
+          this.pushStateToPlugin();
           this.renderOverlay();
         });
       });
@@ -382,7 +443,6 @@ export class GameApp {
       return;
     }
 
-    // Clear overlay — plugin HUD handles controls (pointer-events none so clicks pass to plugin)
     this.overlay.innerHTML = this.statusMessage
       ? `<p class="status-chip">${this.statusMessage}</p>`
       : '';

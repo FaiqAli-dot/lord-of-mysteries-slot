@@ -1,115 +1,132 @@
 import './pluginApi';
-import type { GameUiConfig, UiPluginOrientation } from './pluginApi';
+import type { GameUiConfig } from './pluginApi';
 import { GAME_CONFIG, SYMBOLS, type SymbolId } from '../config/gameConfig';
+import { detectLayout, type LayoutKind } from './sizeConfig';
 
-const DESKTOP = { width: 2048, height: 1080 };
-
-function call(id: string, method: string, ...args: unknown[]): unknown {
-  return window.externalUi?.call?.(id, method, ...args);
+/** Game → plugin RPC (errors swallowed, matching UIController.externalUiCall). */
+export function externalUiCall(id: string, method: string, ...args: unknown[]): unknown {
+  try {
+    return window.externalUi?.call?.(id, method, ...args);
+  } catch {
+    return undefined;
+  }
 }
 
-export async function waitForPlugin(timeoutMs = 15000): Promise<void> {
+/** Guide: await vueReady with ~3s timeout race. */
+export async function waitForHostUi(timeoutMs = 3000): Promise<void> {
   const start = Date.now();
-  while (!window.externalUi) {
-    if (Date.now() - start > timeoutMs) throw new Error('ui-plugin externalUi not available');
-    await new Promise((r) => setTimeout(r, 50));
+  while (!window.externalUi && Date.now() - start < timeoutMs) {
+    await new Promise((r) => setTimeout(r, 40));
   }
   if (window.vueReady) {
     await Promise.race([
       window.vueReady,
-      new Promise((_, rej) => setTimeout(() => rej(new Error('vueReady timeout')), timeoutMs)),
+      new Promise<void>((resolve) => setTimeout(resolve, timeoutMs)),
     ]);
   } else {
-    // Plugin may still be mounting
-    await new Promise((r) => setTimeout(r, 300));
-  }
-  // Ensure game_ui handle exists
-  while (Date.now() - start < timeoutMs) {
-    try {
-      const vis = call('game_ui', 'isVisible');
-      if (typeof vis === 'boolean' || vis === undefined) break;
-    } catch {
-      /* retry */
-    }
-    if (window.externalUi && 'game_ui' in window.externalUi) break;
-    await new Promise((r) => setTimeout(r, 50));
+    await new Promise((r) => setTimeout(r, Math.min(400, timeoutMs)));
   }
 }
 
-export function initPluginHud(): void {
+/**
+ * Startup after vueReady (Load.onExit order):
+ * setGameConfig → setMode (via resizeExternalUi) → show
+ */
+export function initPluginHud(lang = 'en'): void {
   const cfg: GameUiConfig = {
-    width: DESKTOP.width,
-    height: DESKTOP.height,
-    lang: 'en',
-    gameName: GAME_CONFIG.title,
+    width: 2048,
+    height: 1080,
+    lang,
+    gameName: 'pathways-of-the-sealed',
     scatterID: 'SCATTER',
     wildID: 'WILD',
     bonusID: null,
     maximumFractionDigits: 0,
     lobbyOnly: false,
   };
-  call('game_ui', 'setGameConfig', cfg);
-  applyPluginMode();
-  call('game_ui', 'show');
-  // Idle turbo = off visible
-  call('turbo-on-button', 'hide');
-  call('turbo-fast-button', 'hide');
-  call('turbo-off-button', 'show');
-  call('spin-stop-button', 'hide');
-  call('autoplay-stop-button', 'hide');
-  call('fs-amount', 'hide');
-  call('fs-text', 'hide');
-  call('auto-amount', 'hide');
-  call('auto-text', 'hide');
+  externalUiCall('game_ui', 'setGameConfig', cfg);
+  resizeExternalUi();
+  externalUiCall('game_ui', 'show');
+
+  externalUiCall('turbo-on-button', 'hide');
+  externalUiCall('turbo-fast-button', 'hide');
+  externalUiCall('turbo-off-button', 'show');
+  externalUiCall('spin-stop-button', 'hide');
+  externalUiCall('autoplay-stop-button', 'hide');
+  externalUiCall('fs-amount', 'hide');
+  externalUiCall('fs-text', 'hide');
+  externalUiCall('auto-amount', 'hide');
+  externalUiCall('auto-text', 'hide');
 }
 
-export function applyPluginMode(): void {
-  const w = window.visualViewport?.width ?? window.innerWidth;
-  const h = window.visualViewport?.height ?? window.innerHeight;
-  if (w < 900) {
-    const orientation: UiPluginOrientation = h >= w ? 'portrait' : 'landscape';
-    call('game_ui', 'setMode', 'mobile', orientation);
-  } else {
-    call('game_ui', 'setMode', '', '');
-  }
+/** LayerManager.resizeExternalUi → game_ui.setMode */
+export function resizeExternalUi(kind: LayoutKind = detectLayout()): void {
+  if (kind === 'portrait') externalUiCall('game_ui', 'setMode', 'mobile', 'portrait');
+  else if (kind === 'landscape') externalUiCall('game_ui', 'setMode', 'mobile', 'landscape');
+  else externalUiCall('game_ui', 'setMode', '', '');
 }
 
 export function setBalanceText(n: number): void {
-  call('balance-amount', 'setText', formatCredits(n));
+  externalUiCall('balance-amount', 'setText', formatCredits(n));
 }
 
 export function setBetText(n: number): void {
-  call('bet-amount', 'setText', formatCredits(n));
-  call('bet-amount-popup', 'setText', formatCredits(n));
+  const t = formatCredits(n);
+  externalUiCall('bet-amount', 'setText', t);
+  externalUiCall('bet-amount-popup', 'setText', t);
+  externalUiCall('ui-help-popup', 'setBet', n);
 }
 
 export function setWinText(n: number): void {
-  call('win-amount', 'setText', formatCredits(n));
-}
-
-export function setSpinEnabled(enabled: boolean): void {
-  call('spin-button', enabled ? 'enable' : 'disable');
-  call('plus-button', enabled ? 'enable' : 'disable');
-  call('minus-button', enabled ? 'enable' : 'disable');
-}
-
-export function setSpinningUi(spinning: boolean): void {
-  if (spinning) {
-    call('spin-button', 'hide');
-    call('spin-stop-button', 'show');
-    call('spin-stop-button', 'enable');
+  if (n <= 0) {
+    externalUiCall('win-amount', 'setText', '');
+    externalUiCall('win-amount', 'hide');
   } else {
-    call('spin-stop-button', 'hide');
-    call('spin-button', 'show');
+    externalUiCall('win-amount', 'show');
+    externalUiCall('win-amount', 'setText', formatCredits(n));
   }
 }
 
+export function updateBetButtons(bet: number, min: number, max: number): void {
+  externalUiCall('minus-button', bet <= min ? 'disable' : 'enable');
+  externalUiCall('plus-button', bet >= max ? 'disable' : 'enable');
+  externalUiCall('minus-button-popup', bet <= min ? 'disable' : 'enable');
+  externalUiCall('plus-button-popup', bet >= max ? 'disable' : 'enable');
+}
+
+export function setSpinEnabled(enabled: boolean): void {
+  externalUiCall('spin-button', enabled ? 'enable' : 'disable');
+  if (enabled) {
+    externalUiCall('autoplay-button', 'enable');
+  } else {
+    externalUiCall('autoplay-button', 'disable');
+  }
+}
+
+export function spinActive(active: boolean): void {
+  if (active) {
+    externalUiCall('spin-button', 'hide');
+    externalUiCall('spin-stop-button', 'show');
+    externalUiCall('spin-stop-button', 'enable');
+    externalUiCall('plus-button', 'disable');
+    externalUiCall('minus-button', 'disable');
+    externalUiCall('autoplay-button', 'disable');
+  } else {
+    externalUiCall('spin-stop-button', 'hide');
+    externalUiCall('spin-button', 'show');
+  }
+}
+
+/**
+ * Turbo levels per guide:
+ * 0 off → turbo-off; 1 quick → turbo-fast (+ settings turbo true); 2 max → turbo-on
+ */
 export function setTurboLevel(level: 0 | 1 | 2): void {
-  call('turbo-off-button', level === 0 ? 'show' : 'hide');
-  call('turbo-on-button', level === 1 ? 'show' : 'hide');
-  call('turbo-fast-button', level === 2 ? 'show' : 'hide');
+  externalUiCall('turbo-off-button', level === 0 ? 'show' : 'hide');
+  externalUiCall('turbo-fast-button', level === 1 ? 'show' : 'hide');
+  externalUiCall('turbo-on-button', level === 2 ? 'show' : 'hide');
   try {
-    call('ui-popup-settings', 'setToggle', 'turbo', level > 0);
+    externalUiCall('ui-popup-settings', 'setToggle', 'turbo', level === 1);
   } catch {
     /* optional */
   }
@@ -117,26 +134,27 @@ export function setTurboLevel(level: 0 | 1 | 2): void {
 
 export function setAutoplayActive(active: boolean, remaining?: number): void {
   if (active) {
-    call('autoplay-button', 'hide');
-    call('autoplay-stop-button', 'show');
-    call('auto-amount', 'show');
-    call('auto-text', 'show');
-    if (remaining != null) call('auto-amount', 'setText', String(remaining));
+    externalUiCall('autoplay-button', 'hide');
+    externalUiCall('autoplay-stop-button', 'show');
+    externalUiCall('auto-amount', 'show');
+    externalUiCall('auto-text', 'show');
+    if (remaining != null) externalUiCall('auto-amount', 'setText', String(remaining));
+    externalUiCall('info-board', 'show');
+    externalUiCall('info-board', 'setText', 'Autoplay active');
   } else {
-    call('autoplay-stop-button', 'hide');
-    call('autoplay-button', 'show');
-    call('auto-amount', 'hide');
-    call('auto-text', 'hide');
+    externalUiCall('autoplay-stop-button', 'hide');
+    externalUiCall('autoplay-button', 'show');
+    externalUiCall('auto-amount', 'hide');
+    externalUiCall('auto-text', 'hide');
+    externalUiCall('info-board', 'hide');
   }
 }
 
 export function setSoundToggles(musicOn: boolean, soundOn: boolean): void {
-  try {
-    call('ui-popup-settings', 'setToggle', 'music', musicOn);
-    call('ui-popup-settings', 'setToggle', 'sound', soundOn);
-  } catch {
-    /* optional before mount */
-  }
+  externalUiCall('ui-popup-settings', 'setToggle', 'music', musicOn);
+  externalUiCall('ui-popup-settings', 'setToggle', 'sound', soundOn);
+  externalUiCall('music-on-button', musicOn ? 'show' : 'hide');
+  externalUiCall('music-off-button', musicOn ? 'hide' : 'show');
 }
 
 export function showPaytableInPlugin(): void {
@@ -146,20 +164,19 @@ export function showPaytableInPlugin(): void {
   const rows = ids
     .map((id) => {
       const d = SYMBOLS[id];
-      return `<tr><td>${d.name}</td><td>3×${d.pays[0]}</td><td>4×${d.pays[1]}</td><td>5×${d.pays[2]}</td></tr>`;
+      return `<tr><td>${d.name}</td><td coeficient="${d.pays[0]}">3×${d.pays[0]}</td><td coeficient="${d.pays[1]}">4×${d.pays[1]}</td><td coeficient="${d.pays[2]}">5×${d.pays[2]}</td></tr>`;
     })
     .join('');
-  call('ui-help-popup', 'addPage', {
+  externalUiCall('ui-help-popup', 'addPage', {
     html: `<div class="pathways-paytable"><h2>${GAME_CONFIG.title}</h2>
-      <p>5×4 · 20 paylines · demo credits only</p>
-      <table><thead><tr><th>Symbol</th><th>3</th><th>4</th><th>5</th></tr></thead><tbody>${rows}</tbody></table>
-      <p>Wild substitutes. Scatter does not. Sequence & Spirituality meters are on the game canvas.</p></div>`,
-    css: `.pathways-paytable{color:#eee;font-family:Montserrat,sans-serif;padding:1rem}
+      <p>5×4 · 20 paylines · demo credits</p>
+      <table><thead><tr><th>Symbol</th><th>3</th><th>4</th><th>5</th></tr></thead><tbody>${rows}</tbody></table></div>`,
+    css: `.pathways-paytable{color:#eee;font-family:Montserrat,sans-serif;padding:calc(var(--game-ui-percent) * 2)}
       .pathways-paytable table{width:100%;border-collapse:collapse}
       .pathways-paytable td,.pathways-paytable th{border-bottom:1px solid #555;padding:0.35rem;text-align:left}`,
   });
-  call('ui-help-popup', 'show');
-  call('overlay', 'show');
+  externalUiCall('ui-help-popup', 'show');
+  externalUiCall('overlay', 'show');
 }
 
 function formatCredits(n: number): string {
@@ -174,9 +191,14 @@ export type PluginUiHandlers = {
   onMaxBet?: () => void;
   onAutoplayStart: (rounds: number) => void;
   onAutoplayStop: () => void;
+  /** Toolbar turbo button → cycle 0→1→2→0 */
   onTurboCycle: () => void;
+  /** Settings turbo toggle → level 0↔1 only */
+  onTurboToggle: (on: boolean) => void;
   onSoundToggle: (kind: 'music' | 'sound', on: boolean) => void;
+  onSoundVolume: (vol0to100: number) => void;
   onPaytable: () => void;
+  onPopupStatus: (popup: string, isOpen: boolean) => void;
 };
 
 export function bindPluginEvents(h: PluginUiHandlers): () => void {
@@ -202,6 +224,9 @@ export function bindPluginEvents(h: PluginUiHandlers): () => void {
       case 'max-bet':
         h.onMaxBet?.();
         break;
+      case 'autoplay-button':
+        externalUiCall('ui-popup-autoplay', 'show');
+        break;
       case 'autoplay-stop-button':
         h.onAutoplayStop();
         break;
@@ -222,13 +247,8 @@ export function bindPluginEvents(h: PluginUiHandlers): () => void {
 
   const onSettingsToggle = (ev: Event) => {
     const d = (ev as CustomEvent).detail as { item?: string; state?: boolean };
-    if (d?.item === 'turbo') {
-      // Settings toggle: any change cycles; host maps level 0/1/2 via button clicks primarily.
-      h.onTurboCycle();
-    }
-    if (d?.item === 'music' || d?.item === 'sound') {
-      h.onSoundToggle(d.item, !!d.state);
-    }
+    if (d?.item === 'turbo') h.onTurboToggle(!!d.state);
+    if (d?.item === 'music' || d?.item === 'sound') h.onSoundToggle(d.item, !!d.state);
   };
 
   const onSettingsBtn = (ev: Event) => {
@@ -236,19 +256,29 @@ export function bindPluginEvents(h: PluginUiHandlers): () => void {
     if (action === 'paytable') h.onPaytable();
   };
 
+  const onSoundRange = (ev: Event) => {
+    const v = Number((ev as CustomEvent).detail);
+    if (Number.isFinite(v)) h.onSoundVolume(v);
+  };
+
+  const onPopupStatus = (ev: Event) => {
+    const d = (ev as CustomEvent).detail as { popup?: string; isOpen?: boolean };
+    if (d?.popup) h.onPopupStatus(d.popup, !!d.isOpen);
+  };
+
   window.addEventListener('ui-button-click', onButton);
   window.addEventListener('ui-start-autoplay', onAutoStart);
   window.addEventListener('ui-popup-settings-toggls', onSettingsToggle);
   window.addEventListener('ui-popup-settings-btns', onSettingsBtn);
-  window.addEventListener('resize', applyPluginMode);
-  window.addEventListener('orientationchange', applyPluginMode);
+  window.addEventListener('ui-sound-range', onSoundRange);
+  window.addEventListener('status-ui-popups', onPopupStatus);
 
   return () => {
     window.removeEventListener('ui-button-click', onButton);
     window.removeEventListener('ui-start-autoplay', onAutoStart);
     window.removeEventListener('ui-popup-settings-toggls', onSettingsToggle);
     window.removeEventListener('ui-popup-settings-btns', onSettingsBtn);
-    window.removeEventListener('resize', applyPluginMode);
-    window.removeEventListener('orientationchange', applyPluginMode);
+    window.removeEventListener('ui-sound-range', onSoundRange);
+    window.removeEventListener('status-ui-popups', onPopupStatus);
   };
 }
