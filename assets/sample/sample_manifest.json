@@ -1,0 +1,122 @@
+{
+  "config": "assets/processing/crops.sample.json",
+  "version": 2,
+  "count": 5,
+  "assets": [
+    {
+      "id": "hv_hanged_man",
+      "path": "assets/sample/symbols/high/hv_hanged_man.png",
+      "category": "symbols/high",
+      "source": "assets/source/04_high_value_icons_sheet.jpg",
+      "crop": [
+        6,
+        264,
+        223,
+        240
+      ],
+      "dims": [
+        223,
+        240
+      ],
+      "transparency": true,
+      "matte_method": "color_distance_soft",
+      "identity": "Inverted metallic figure on chains with red aura",
+      "suggested_identity": "Hanged Man (likely)",
+      "identity_confidence": "likely",
+      "review_status": "needs_review",
+      "notes": "Sample alias for hv_icon_r2c1_hanged_figure. Dark silhouette protection enabled. Do not map to FOOL without owner approval."
+    },
+    {
+      "id": "low_ace",
+      "path": "assets/sample/symbols/low/low_ace.png",
+      "category": "symbols/low",
+      "source": "assets/source/03_labeled_symbols_sheet.jpg",
+      "crop": [
+        0,
+        2,
+        278,
+        252
+      ],
+      "dims": [
+        278,
+        252
+      ],
+      "transparency": true,
+      "matte_method": "color_distance_soft",
+      "identity": "A (Ace)",
+      "suggested_identity": null,
+      "identity_confidence": "certain",
+      "review_status": "ok",
+      "notes": "Widened to cell gap; source smoke meets K-flame boundary ~x=281 so right edge is soft-faded."
+    },
+    {
+      "id": "wild_basic",
+      "path": "assets/sample/symbols/wild/wild_basic.png",
+      "category": "symbols/wild",
+      "source": "assets/source/03_labeled_symbols_sheet.jpg",
+      "crop": [
+        1181,
+        12,
+        219,
+        236
+      ],
+      "dims": [
+        219,
+        236
+      ],
+      "transparency": true,
+      "matte_method": "color_distance_soft",
+      "identity": "WILD (basic gold medallion)",
+      "suggested_identity": null,
+      "identity_confidence": "certain",
+      "review_status": "ok",
+      "notes": null
+    },
+    {
+      "id": "scatter_wax_seal",
+      "path": "assets/sample/symbols/scatter/scatter_wax_seal.png",
+      "category": "symbols/scatter",
+      "source": "assets/source/03_labeled_symbols_sheet.jpg",
+      "crop": [
+        524,
+        255,
+        178,
+        196
+      ],
+      "dims": [
+        178,
+        196
+      ],
+      "transparency": true,
+      "matte_method": "color_distance_soft+cyan_kill",
+      "identity": "SCATTER (red wax seal)",
+      "suggested_identity": null,
+      "identity_confidence": "certain",
+      "review_status": "ok",
+      "notes": "Left crop tightened + left_edge teal mask to remove celestial WILD bleed."
+    },
+    {
+      "id": "bg_gothic_library",
+      "path": "assets/sample/backgrounds/bg_gothic_library.png",
+      "category": "backgrounds",
+      "source": "assets/source/02_library_background.jpg",
+      "crop": [
+        0,
+        0,
+        1376,
+        768
+      ],
+      "dims": [
+        1376,
+        768
+      ],
+      "transparency": false,
+      "matte_method": "opaque_passthrough",
+      "identity": "Moonlit gothic library background",
+      "suggested_identity": null,
+      "identity_confidence": "certain",
+      "review_status": "ok",
+      "notes": "Standalone opaque scene. Keep intact \u2014 no transparency."
+    }
+  ]
+}

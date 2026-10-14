@@ -2,16 +2,94 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1, user-scalable=no" />
     <meta name="description" content="Pathways of the Sealed — a gothic occult slot demo. Demo credits only. Not real-money gambling." />
     <title>Pathways of the Sealed</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <style>
+      :root {
+        --game-ui-width: 0;
+        --game-ui-percent: calc(var(--game-ui-width) * 0.01);
+      }
+      .game-ui:not(.visible) * {
+        visibility: hidden !important;
+      }
+      html, body {
+        margin: 0;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background: #0a0908;
+        touch-action: none;
+      }
+      #game-canvas {
+        display: block;
+        position: fixed;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 0;
+      }
+    </style>
   </head>
   <body>
     <div id="app"></div>
+    <!-- ui-plugin loader (Space Fortune pattern; Pages uses VITE_UI_PLUGIN_URL / CDN, not origin+/ui-plugin/) -->
+    <script>
+      (function () {
+        var REMOTE = __VITE_UI_PLUGIN_REMOTE__;
+        var LOCAL = __VITE_UI_PLUGIN_LOCAL__;
+        var isLocalhost = ['localhost', '127.0.0.1', '0.0.0.0', '::1'].indexOf(location.hostname) !== -1;
+        var base = REMOTE || (isLocalhost ? 'https://demo.ninjagaming.com/ui-plugin/' : REMOTE);
+        if (!base) base = 'https://demo.ninjagaming.com/ui-plugin/';
+
+        function withSlash(u) {
+          return u.charAt(u.length - 1) === '/' ? u : u + '/';
+        }
+        base = withSlash(base);
+        LOCAL = withSlash(LOCAL || (location.pathname.replace(/\/[^/]*$/, '/') + 'ui-plugin/'));
+
+        window.__UI_PLUGIN_BASE__ = base;
+        window.__GAME_UI_BASE__ = base.replace(/\/$/, '');
+
+        function appendCss(href) {
+          var l = document.createElement('link');
+          l.rel = 'stylesheet';
+          l.href = href;
+          document.head.appendChild(l);
+          return l;
+        }
+        function appendJs(src, onError) {
+          var sc = document.createElement('script');
+          sc.src = src;
+          sc.defer = true;
+          if (onError) sc.onerror = onError;
+          document.body.appendChild(sc);
+          return sc;
+        }
+
+        var cssLink = appendCss(base + 'game-ui.css');
+        appendJs(base + 'game-ui.js', function () {
+          console.warn('[ui-plugin] remote load failed, falling back to', LOCAL);
+          base = LOCAL;
+          window.__UI_PLUGIN_BASE__ = base;
+          window.__GAME_UI_BASE__ = base.replace(/\/$/, '');
+          if (cssLink && cssLink.parentNode) cssLink.parentNode.removeChild(cssLink);
+          appendCss(base + 'game-ui.css');
+          appendJs(base + 'game-ui.js');
+        });
+
+        // Gesture guards (SF index.html)
+        document.addEventListener('gesturestart', function (e) { e.preventDefault(); }, { passive: false });
+        document.addEventListener('dblclick', function (e) { e.preventDefault(); }, { passive: false });
+        document.addEventListener('wheel', function (e) {
+          if (e.ctrlKey) e.preventDefault();
+        }, { passive: false });
+      })();
+    </script>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>
