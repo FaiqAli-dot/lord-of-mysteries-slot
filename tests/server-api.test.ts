@@ -1,13 +1,31 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { spawn, type ChildProcess } from 'node:child_process';
+import { createServer } from 'node:net';
 
-const PORT = 8799;
-const BASE = `http://127.0.0.1:${PORT}`;
+async function freePort(): Promise<number> {
+  return new Promise((resolve, reject) => {
+    const s = createServer();
+    s.listen(0, '127.0.0.1', () => {
+      const addr = s.address();
+      if (!addr || typeof addr === 'string') {
+        s.close();
+        reject(new Error('no port'));
+        return;
+      }
+      const port = addr.port;
+      s.close(() => resolve(port));
+    });
+    s.on('error', reject);
+  });
+}
 
 describe('server API', () => {
   let child: ChildProcess;
+  let BASE = '';
 
   beforeAll(async () => {
+    const PORT = await freePort();
+    BASE = `http://127.0.0.1:${PORT}`;
     child = spawn('npx', ['tsx', 'server/index.ts'], {
       cwd: '/workspace',
       env: { ...process.env, PORT: String(PORT) },
@@ -15,19 +33,26 @@ describe('server API', () => {
     });
     // Wait for listen
     await new Promise<void>((resolve, reject) => {
-      const t = setTimeout(() => reject(new Error('server start timeout')), 15000);
-      child.stdout?.on('data', (buf: Buffer) => {
-        if (String(buf).includes('listening')) {
-          clearTimeout(t);
-          resolve();
-        }
-      });
-      child.stderr?.on('data', (buf: Buffer) => {
+      let settled = false;
+      const t = setTimeout(() => {
+        if (!settled) reject(new Error('server start timeout'));
+      }, 15000);
+      const done = (err?: Error) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(t);
+        if (err) reject(err);
+        else resolve();
+      };
+      const onData = (buf: Buffer) => {
         const s = String(buf);
-        if (s.toLowerCase().includes('error')) {
-          clearTimeout(t);
-          reject(new Error(s));
-        }
+        if (s.includes('listening')) done();
+        if (/EADDRINUSE/.test(s)) done(new Error(s));
+      };
+      child.stdout?.on('data', onData);
+      child.stderr?.on('data', onData);
+      child.once('exit', (code) => {
+        if (!settled) done(new Error(`server exited early: ${code}`));
       });
     });
   }, 20000);

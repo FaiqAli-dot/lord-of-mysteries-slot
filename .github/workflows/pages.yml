@@ -1,4 +1,4 @@
-name: Deploy GitHub Pages (frontend)
+name: Deploy GitHub Pages
 
 on:
   push:
@@ -24,9 +24,13 @@ jobs:
           node-version: '22'
           cache: npm
       - run: npm ci
-      - name: Build frontend
+      - name: Test
+        run: npm test
+      - name: Build static frontend
         env:
-          # Optional default API URL baked at build time (overridable at runtime via ?api= or Settings).
+          # Project Pages URL: https://faiqali-dot.github.io/lord-of-mysteries-slot/
+          VITE_BASE: /lord-of-mysteries-slot/
+          # Optional remote API (leave unset for fully client-side Pages demo)
           VITE_API_BASE: ${{ vars.VITE_API_BASE }}
         run: npm run build
       - uses: actions/upload-pages-artifact@v3

@@ -13,7 +13,9 @@
     "test:watch": "vitest",
     "simulate": "tsx scripts/simulate.ts",
     "simulate:quick": "tsx scripts/simulate.ts --spins 100000",
-    "typecheck": "tsc --noEmit"
+    "simulate:smoke": "tsx scripts/simulate.ts --spins 20000 --seed 7",
+    "typecheck": "tsc --noEmit",
+    "ci": "npm run typecheck && npm test && npm run simulate:smoke && VITE_BASE=/lord-of-mysteries-slot/ npm run build"
   },
   "devDependencies": {
     "@types/node": "^26.6.5",

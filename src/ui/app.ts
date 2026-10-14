@@ -2,15 +2,16 @@ import { GAME_CONFIG, SYMBOLS, PAYLINES, SCATTER_PAYS, type BonusModeId, type Sy
 import { buildSymbolArt, ART_LICENSE_NOTES } from '../art/symbols';
 import { SoftAudio } from './audio';
 import { sequenceProgress } from '../engine/sequence';
-import { RemoteSession } from '../api/remoteSession';
-import { resolveApiBase, getStoredApiBase, getBuildTimeApiBase } from '../api/apiConfig';
+import { getStoredApiBase, getBuildTimeApiBase } from '../api/apiConfig';
+import { createSession, switchSessionApi, isRemote, type GameSession } from '../api/session';
 import type { GameState } from '../engine/types';
 
 type ModalId = 'none' | 'paytable' | 'help' | 'settings' | 'bonusSelect' | 'bonusSummary';
 
 export class GameApp {
   private root: HTMLElement;
-  private session: RemoteSession;
+  private session: GameSession;
+  private unsub: (() => void) | null = null;
   private art: Record<SymbolId, string>;
   private audio = new SoftAudio();
   private modal: ModalId = 'none';
@@ -21,33 +22,39 @@ export class GameApp {
 
   constructor(root: HTMLElement) {
     this.root = root;
-    this.session = new RemoteSession(resolveApiBase());
+    this.session = createSession();
     this.art = buildSymbolArt();
+    this.wireSession();
 
     const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
     this.session.setReducedMotion(mq.matches);
     mq.addEventListener('change', (e) => this.session.setReducedMotion(e.matches));
 
-    this.session.subscribe(() => {
-      if (this.session.state?.muted !== undefined) {
-        this.audio.setMuted(this.session.state.muted);
-      }
-      this.render();
-    });
     this.bindKeys();
     this.render();
     void this.bootstrap();
   }
 
-  /** Exposed for QA / screenshots. */
-  get remote(): RemoteSession {
+  /** Exposed for QA / screenshots (local or remote). */
+  get remote(): GameSession {
     return this.session;
   }
 
+  private wireSession(): void {
+    this.unsub?.();
+    this.unsub = this.session.subscribe(() => {
+      if (this.session.state?.muted !== undefined) {
+        this.audio.setMuted(this.session.state.muted);
+      }
+      this.render();
+    });
+  }
+
   private async bootstrap(): Promise<void> {
-    if (!this.session.configured) {
-      this.statusMessage = 'Configure API URL in Settings (or open with ?api=https://…)';
-      this.modal = 'settings';
+    if (!isRemote(this.session)) {
+      await this.session.connect();
+      this.statusMessage = 'Client-side demo (no API) — works on GitHub Pages alone';
+      this.audio.setMuted(this.session.state?.muted ?? false);
       this.render();
       return;
     }
@@ -58,7 +65,7 @@ export class GameApp {
       this.statusMessage = `Connected · ${this.session.api.base}`;
       this.audio.setMuted(this.session.state?.muted ?? false);
     } else {
-      this.statusMessage = this.session.error ?? 'Connection failed';
+      this.statusMessage = this.session.error ?? 'Connection failed — clear API URL for client-side play';
       this.modal = 'settings';
     }
     this.render();
@@ -70,7 +77,7 @@ export class GameApp {
 
   private bindKeys(): void {
     window.addEventListener('keydown', (e) => {
-      if (this.busy || this.session.status !== 'ready') return;
+      if (this.busy || this.session.status !== 'ready' || !this.state()) return;
       if (e.key === ' ' || e.key === 'Enter') {
         e.preventDefault();
         void this.onSpin();
@@ -247,7 +254,7 @@ export class GameApp {
         <span style="left:40%;animation-delay:6s"></span>
         <span style="left:70%;animation-delay:12s"></span>
       </div>
-      <div class="demo-banner">${GAME_CONFIG.demoLabel} · server-authoritative</div>
+      <div class="demo-banner">${GAME_CONFIG.demoLabel} · ${isRemote(this.session) ? 'server-authoritative' : 'client-side'}</div>
       <div class="game-shell bonus-stage ${bonusClass}">
         <header class="brand-header">
           <h1>${GAME_CONFIG.title}</h1>
@@ -465,7 +472,7 @@ export class GameApp {
     const tabs = ['rules', 'features', 'bonuses', 'licenses'] as const;
     const body = {
       rules: `<p>5 reels × 4 rows, ${PAYLINES.length} fixed paylines, left-to-right. Manual spin only — no autoplay.</p>
-        <p>Spins, RNG, and balance are <strong>server-authoritative</strong>. The browser only renders results from the API.</p>
+        <p>Default play is <strong>fully client-side</strong> (works on GitHub Pages alone). Optional remote API makes spins/balance server-authoritative when an API URL is set.</p>
         <p>3–4 Scatters: choose Tarot Club or Crimson Moon. 5+ Scatters: Fool's Miracles (priority). Integer demo credits only.</p>`,
       features: `<p><strong>Sequence</strong> — gradual multiplier (max ${GAME_CONFIG.sequence.maxMultiplier}×) advancing on winning spins; applied before advancing; resets after every bonus.</p>
         <p><strong>Spirituality</strong> — charge to ${GAME_CONFIG.spirituality.threshold} from winning spins and Spirit Embers, then one effect: Grafting, Blind Stupidity, Creeping Hunger, Glove, or Locked Wild. Meter resets to 0 (no overflow).</p>
@@ -495,15 +502,17 @@ export class GameApp {
   private modalSettings(): string {
     const s = this.state();
     const apiValue = this.session.api.base || getStoredApiBase() || getBuildTimeApiBase();
+    const mode = isRemote(this.session) ? 'Remote API' : 'Client-side (Pages-ready)';
     return `<div class="overlay"><div class="panel">
       <h2>Settings</h2>
       <p>${GAME_CONFIG.demoLabel}</p>
+      <p style="color:var(--gold);font-size:0.9rem">Mode: ${mode}</p>
       <label style="display:block;margin:0.75rem 0;font-family:var(--font-display);font-size:0.7rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--bronze)">
-        API base URL
-        <input data-setting="api" type="url" value="${apiValue.replace(/"/g, '&quot;')}" placeholder="https://xxxx.trycloudflare.com"
+        API base URL (optional)
+        <input data-setting="api" type="url" value="${apiValue.replace(/"/g, '&quot;')}" placeholder="Leave empty for client-side play"
           style="display:block;width:100%;margin-top:0.35rem;padding:0.5rem;background:var(--ink);border:1px solid var(--bronze);color:var(--cream);font-family:var(--font-body);font-size:1rem"/>
       </label>
-      <p style="font-size:0.85rem;color:var(--fog-dim)">Also set via <code>?api=https://…</code> (saved to localStorage). Build default: <code>VITE_API_BASE</code>.</p>
+      <p style="font-size:0.85rem;color:var(--fog-dim)">Empty = fully client-side (GitHub Pages works alone). Or set <code>?api=https://…</code> / build-time <code>VITE_API_BASE</code> for a remote server.</p>
       <label style="display:flex;align-items:center;gap:0.5rem;margin:0.75rem 0">
         <input type="checkbox" data-setting="mute" ${s?.muted ? 'checked' : ''}/> Mute sound
       </label>
@@ -567,7 +576,8 @@ export class GameApp {
             case 'save-api': {
               const input = this.root.querySelector('[data-setting="api"]') as HTMLInputElement | null;
               const url = input?.value?.trim() ?? '';
-              this.session.setApiBase(url);
+              this.session = switchSessionApi(this.session, url);
+              this.wireSession();
               this.modal = 'none';
               await this.bootstrap();
               break;
