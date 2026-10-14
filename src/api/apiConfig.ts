@@ -63,3 +63,25 @@ export function resolveApiBase(): string {
   if (stored) return stored;
   return getBuildTimeApiBase();
 }
+
+/**
+ * Extra request headers for public HTTPS tunnels that show an interstitial
+ * (e.g. localtunnel / loca.lt requires Bypass-Tunnel-Reminder).
+ */
+export function tunnelRequestHeaders(apiBase: string): Record<string, string> {
+  if (!apiBase) return {};
+  try {
+    const host = new URL(apiBase).hostname.toLowerCase();
+    if (
+      host === 'loca.lt' ||
+      host.endsWith('.loca.lt') ||
+      host === 'localtunnel.me' ||
+      host.endsWith('.localtunnel.me')
+    ) {
+      return { 'Bypass-Tunnel-Reminder': 'true' };
+    }
+  } catch {
+    /* ignore invalid URL */
+  }
+  return {};
+}

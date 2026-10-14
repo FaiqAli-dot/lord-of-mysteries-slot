@@ -1,6 +1,10 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { spawn, type ChildProcess } from 'node:child_process';
 import { createServer } from 'node:net';
+import path from 'node:path';
+import { createRequire } from 'node:module';
+
+const require = createRequire(import.meta.url);
 
 async function freePort(): Promise<number> {
   return new Promise((resolve, reject) => {
@@ -19,6 +23,11 @@ async function freePort(): Promise<number> {
   });
 }
 
+/** Resolve tsx CLI without relying on `npx` being on PATH (fails in some CI images). */
+function tsxCliPath(): string {
+  return require.resolve('tsx/cli');
+}
+
 describe('server API', () => {
   let child: ChildProcess;
   let BASE = '';
@@ -26,17 +35,21 @@ describe('server API', () => {
   beforeAll(async () => {
     const PORT = await freePort();
     BASE = `http://127.0.0.1:${PORT}`;
-    child = spawn('npx', ['tsx', 'server/index.ts'], {
-      cwd: '/workspace',
-      env: { ...process.env, PORT: String(PORT) },
-      stdio: ['ignore', 'pipe', 'pipe'],
-    });
+    child = spawn(
+      process.execPath,
+      [tsxCliPath(), path.join('server', 'index.ts')],
+      {
+        cwd: process.cwd(),
+        env: { ...process.env, PORT: String(PORT) },
+        stdio: ['ignore', 'pipe', 'pipe'],
+      },
+    );
     // Wait for listen
     await new Promise<void>((resolve, reject) => {
       let settled = false;
       const t = setTimeout(() => {
         if (!settled) reject(new Error('server start timeout'));
-      }, 15000);
+      }, 20000);
       const done = (err?: Error) => {
         if (settled) return;
         settled = true;
@@ -47,15 +60,16 @@ describe('server API', () => {
       const onData = (buf: Buffer) => {
         const s = String(buf);
         if (s.includes('listening')) done();
-        if (/EADDRINUSE/.test(s)) done(new Error(s));
+        if (/EADDRINUSE|Cannot find module|ERR_/.test(s)) done(new Error(s));
       };
       child.stdout?.on('data', onData);
       child.stderr?.on('data', onData);
       child.once('exit', (code) => {
         if (!settled) done(new Error(`server exited early: ${code}`));
       });
+      child.once('error', (err) => done(err));
     });
-  }, 20000);
+  }, 25000);
 
   afterAll(() => {
     child?.kill('SIGTERM');
@@ -95,12 +109,27 @@ describe('server API', () => {
     expect(after.state.balance).toBe(before - after.state.bet + after.state.lastPayout);
   });
 
-  it('CORS allows GitHub Pages origin', async () => {
+  it('CORS allows GitHub Pages origin and tunnel bypass header', async () => {
     const res = await fetch(`${BASE}/health`, {
-      headers: { Origin: 'https://faiqali-dot.github.io' },
+      headers: {
+        Origin: 'https://faiqali-dot.github.io',
+        'Bypass-Tunnel-Reminder': 'true',
+      },
     });
     expect(res.headers.get('access-control-allow-origin')).toBe(
       'https://faiqali-dot.github.io',
     );
+
+    const preflight = await fetch(`${BASE}/api/session`, {
+      method: 'OPTIONS',
+      headers: {
+        Origin: 'https://faiqali-dot.github.io',
+        'Access-Control-Request-Method': 'POST',
+        'Access-Control-Request-Headers': 'content-type,bypass-tunnel-reminder',
+      },
+    });
+    expect(preflight.status).toBe(204);
+    const allowHeaders = (preflight.headers.get('access-control-allow-headers') ?? '').toLowerCase();
+    expect(allowHeaders).toContain('bypass-tunnel-reminder');
   });
 });
