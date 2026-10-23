@@ -241,19 +241,33 @@ export const REEL_STRIPS: SymbolId[][] = [
     'KING', 'QUEEN', 'JACK', 'ACE', 'PRIESTESS', 'KING', 'QUEEN', 'JACK', 'ACE', 'KING',
     'QUEEN', 'MAGICIAN', 'JACK', 'ACE', 'KING', 'QUEEN', 'JACK', 'ACE', 'FOOL', 'KING',
     'QUEEN', 'JACK', 'ACE', 'KING', 'QUEEN', 'JACK', 'WILD', 'ACE', 'KING', 'QUEEN',
-    'SPIRIT', 'JACK', 'ACE', 'KING', 'SEQUENCE', 'QUEEN', 'JACK', 'ACE', 'SCATTER', 'KING',
+    'SPIRIT', 'JACK', 'ACE', 'KING', 'QUEEN', 'QUEEN', 'JACK', 'ACE', 'SCATTER', 'KING',
     'QUEEN', 'JACK', 'ACE', 'KING', 'SCATTER', 'QUEEN', 'JACK',
   ],
-  // Reel 2 (middle — Fool's Mirror expansion reel)
+  // Reel 2 — lengthened so Potion Bottle (SEQUENCE) is rare (~4/220 ≈ 1.8% visible)
   [
-    'ACE', 'QUEEN', 'JACK', 'KING', 'ACE', 'QUEEN', 'JACK', 'KING', 'ACE', 'QUEEN',
-    'JACK', 'WORLD', 'KING', 'ACE', 'QUEEN', 'JACK', 'KING', 'ACE', 'HANGED', 'QUEEN',
-    'JACK', 'KING', 'ACE', 'QUEEN', 'JACK', 'WHEEL', 'KING', 'ACE', 'QUEEN', 'JACK',
-    'KING', 'ACE', 'PRIESTESS', 'QUEEN', 'JACK', 'KING', 'ACE', 'QUEEN', 'MAGICIAN', 'JACK',
-    'KING', 'ACE', 'QUEEN', 'JACK', 'FOOL', 'KING', 'ACE', 'QUEEN', 'JACK', 'KING',
-    'ACE', 'QUEEN', 'JACK', 'WILD', 'KING', 'ACE', 'QUEEN', 'SPIRIT', 'JACK', 'KING',
-    'ACE', 'QUEEN', 'JACK', 'KING', 'SCATTER', 'KING', 'ACE', 'QUEEN', 'JACK', 'KING',
-    'ACE', 'QUEEN', 'JACK', 'SCATTER', 'GLOVE', 'ACE', 'QUEEN',
+    'JACK', 'KING', 'QUEEN', 'ACE', 'JACK', 'WORLD', 'QUEEN', 'ACE', 'JACK', 'KING',
+    'QUEEN', 'ACE', 'JACK', 'KING', 'QUEEN', 'ACE', 'JACK', 'KING', 'QUEEN', 'ACE',
+    'JACK', 'KING', 'HANGED', 'ACE', 'JACK', 'KING', 'QUEEN', 'ACE', 'JACK', 'KING',
+    'QUEEN', 'ACE', 'JACK', 'KING', 'QUEEN', 'ACE', 'JACK', 'KING', 'QUEEN', 'WHEEL',
+    'WILD', 'KING', 'QUEEN', 'ACE', 'JACK', 'KING', 'QUEEN', 'ACE', 'JACK', 'KING',
+    'QUEEN', 'ACE', 'JACK', 'KING', 'QUEEN', 'ACE', 'PRIESTESS', 'KING', 'QUEEN', 'ACE',
+    'JACK', 'KING', 'QUEEN', 'ACE', 'JACK', 'KING', 'QUEEN', 'ACE', 'JACK', 'KING',
+    'QUEEN', 'ACE', 'JACK', 'MAGICIAN', 'QUEEN', 'ACE', 'JACK', 'KING', 'QUEEN', 'ACE',
+    'SPIRIT', 'KING', 'QUEEN', 'ACE', 'JACK', 'KING', 'QUEEN', 'ACE', 'JACK', 'KING',
+    'FOOL', 'ACE', 'JACK', 'KING', 'QUEEN', 'ACE', 'JACK', 'KING', 'QUEEN', 'ACE',
+    'JACK', 'KING', 'QUEEN', 'ACE', 'JACK', 'KING', 'QUEEN', 'WORLD', 'JACK', 'KING',
+    'QUEEN', 'ACE', 'JACK', 'KING', 'QUEEN', 'ACE', 'JACK', 'KING', 'QUEEN', 'ACE',
+    'SCATTER', 'KING', 'QUEEN', 'ACE', 'HANGED', 'KING', 'QUEEN', 'ACE', 'JACK', 'KING',
+    'QUEEN', 'ACE', 'JACK', 'KING', 'QUEEN', 'ACE', 'JACK', 'KING', 'QUEEN', 'ACE',
+    'JACK', 'WHEEL', 'QUEEN', 'ACE', 'JACK', 'KING', 'QUEEN', 'ACE', 'JACK', 'KING',
+    'QUEEN', 'ACE', 'JACK', 'KING', 'QUEEN', 'ACE', 'JACK', 'KING', 'PRIESTESS', 'ACE',
+    'SCATTER', 'KING', 'QUEEN', 'ACE', 'JACK', 'KING', 'QUEEN', 'ACE', 'JACK', 'KING',
+    'QUEEN', 'ACE', 'JACK', 'KING', 'QUEEN', 'MAGICIAN', 'JACK', 'KING', 'QUEEN', 'ACE',
+    'JACK', 'KING', 'QUEEN', 'ACE', 'JACK', 'KING', 'QUEEN', 'ACE', 'JACK', 'KING',
+    'QUEEN', 'ACE', 'FOOL', 'KING', 'QUEEN', 'ACE', 'JACK', 'KING', 'QUEEN', 'ACE',
+    'GLOVE', 'KING', 'QUEEN', 'ACE', 'JACK', 'KING', 'QUEEN', 'ACE', 'JACK', 'WORLD',
+    'SEQUENCE', 'ACE', 'JACK', 'KING', 'QUEEN', 'ACE', 'JACK', 'KING', 'QUEEN', 'ACE',
   ],
   // Reel 3
   [
@@ -308,7 +322,7 @@ export const GAME_CONFIG = {
    * Global scale applied to line-pay multiples at evaluation time.
    * Used for fine RTP tuning without rewriting the whole table.
    */
-  payScale: 1.05,
+  payScale: 3.30,
 
   wild: {
     /**
@@ -354,20 +368,20 @@ export const GAME_CONFIG = {
     persistThroughBonus: true,
     /**
      * Fool pathway ladder. potionsRequired = cumulative Potion Bottles landed.
-     * Thresholds are steep so the permanent meter rarely sits at 15× in short sessions
-     * (keeps SEQUENCE category near the ~10% RTP allocation).
+     * Steep thresholds + sparse Potion stops keep long-horizon SEQUENCE near ~10% RTP
+     * while the permanent meter remains reachable for dedicated play.
      */
     tiers: [
       { sequence: 9, title: 'Fool', potionsRequired: 0, multiplier: 1 },
-      { sequence: 8, title: 'Magician', potionsRequired: 8, multiplier: 2 },
-      { sequence: 7, title: 'Faceless', potionsRequired: 22, multiplier: 3 },
-      { sequence: 6, title: 'Marionettist', potionsRequired: 45, multiplier: 4 },
-      { sequence: 5, title: 'Bizarro Sorcerer', potionsRequired: 80, multiplier: 5 },
-      { sequence: 4, title: 'Scholar of Yore', potionsRequired: 130, multiplier: 7 },
-      { sequence: 3, title: 'Miracle Invoker', potionsRequired: 200, multiplier: 9 },
-      { sequence: 2, title: 'Troimere', potionsRequired: 290, multiplier: 11 },
-      { sequence: 1, title: 'Attendant of Mysteries', potionsRequired: 400, multiplier: 13 },
-      { sequence: 0, title: 'Lord of the Mysteries', potionsRequired: 550, multiplier: 15 },
+      { sequence: 8, title: 'Magician', potionsRequired: 4500, multiplier: 2 },
+      { sequence: 7, title: 'Faceless', potionsRequired: 12000, multiplier: 3 },
+      { sequence: 6, title: 'Marionettist', potionsRequired: 25000, multiplier: 4 },
+      { sequence: 5, title: 'Bizarro Sorcerer', potionsRequired: 45000, multiplier: 5 },
+      { sequence: 4, title: 'Scholar of Yore', potionsRequired: 75000, multiplier: 7 },
+      { sequence: 3, title: 'Miracle Invoker', potionsRequired: 120000, multiplier: 9 },
+      { sequence: 2, title: 'Troimere', potionsRequired: 180000, multiplier: 11 },
+      { sequence: 1, title: 'Attendant of Mysteries', potionsRequired: 280000, multiplier: 13 },
+      { sequence: 0, title: 'Lord of the Mysteries', potionsRequired: 450000, multiplier: 15 },
     ] as SequenceTier[],
   },
 
@@ -375,7 +389,7 @@ export const GAME_CONFIG = {
     displayName: 'Spirituality',
     displayHint:
       'Every non-winning spin (and Spirit Embers) feed Klein’s Spirituality. When full, the next spin awakens Grafting or Blind Stupidity, then the meter resets.',
-    threshold: 12,
+    threshold: 16,
     /** Charge +1 on a non-winning spin (when Spirituality did not activate). */
     chargePerNonWin: 1,
     /** Optional pacing: also charge +1 on a winning spin (0 = disabled). */
@@ -509,10 +523,10 @@ export const GAME_CONFIG = {
       stickyWildChance: 0.35,
       /** Random multiplier cards applied as bonus multiplier for that spin. */
       multiplierCards: [
-        { mult: 1, weight: 40 },
-        { mult: 2, weight: 30 },
-        { mult: 3, weight: 18 },
-        { mult: 5, weight: 12 },
+        { mult: 1, weight: 48 },
+        { mult: 2, weight: 32 },
+        { mult: 3, weight: 14 },
+        { mult: 5, weight: 6 },
       ],
       /** Hard max win: 5,000× base stake. */
       maxWinMult: 5000,

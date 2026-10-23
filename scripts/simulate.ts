@@ -13,7 +13,7 @@ const seed = Number(arg('seed', String(0x5eedcafe)));
 const bet = Number(arg('bet', String(GAME_CONFIG.defaultBet)));
 const withTheory = process.argv.includes('--theory');
 
-console.log(`Pathways of the Sealed — RTP simulation`);
+console.log(`${GAME_CONFIG.title} — RTP simulation`);
 console.log(`spins=${spins} seed=${seed} bet=${bet}`);
 console.log(`target RTP=${(GAME_CONFIG.rtpTarget * 100).toFixed(2)}%`);
 console.log('---');
@@ -62,6 +62,7 @@ if (delta <= GAME_CONFIG.rtpTolerance) {
   console.log('PASS: measured RTP within tolerance.');
 } else {
   console.log('OUT OF TOLERANCE: tune strips/paytable/bonus weights.');
+  process.exit(1);
 }
 
 if (withTheory) {

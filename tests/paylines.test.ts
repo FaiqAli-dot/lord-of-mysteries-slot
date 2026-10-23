@@ -46,7 +46,7 @@ describe('paylines', () => {
       expect(w).not.toBeNull();
       expect(w!.count).toBe(n);
       expect(w!.baseCredits).toBe(
-        Math.floor(SYMBOLS.FOOL.pays[n - 3]! * GAME_CONFIG.payScale * lineBet),
+        Math.round(SYMBOLS.FOOL.pays[n - 3]! * GAME_CONFIG.payScale * lineBet),
       );
     }
   });

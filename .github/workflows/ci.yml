@@ -24,7 +24,7 @@ jobs:
         run: npm run typecheck
       - name: Unit & API tests
         run: npm test
-      - name: Seeded RTP smoke (20k spins)
+      - name: Seeded RTP smoke (100k spins)
         run: npm run simulate:smoke
       - name: Build frontend (Pages base path)
         env:

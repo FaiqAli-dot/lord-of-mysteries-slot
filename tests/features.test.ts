@@ -63,7 +63,7 @@ describe('Sequence (Potion Bottle permanent ladder)', () => {
     const t15 = GAME_CONFIG.sequence.tiers.find((t) => t.multiplier === 15)!;
     expect(sequenceMultiplierForWins(t15.potionsRequired)).toBe(15);
     expect(sequenceTierForPotions(t15.potionsRequired).sequence).toBe(0);
-    expect(sequenceMultiplierForWins(9999)).toBe(15);
+    expect(sequenceMultiplierForWins(t15.potionsRequired + 1_000_000)).toBe(15);
   });
 
   it('cheats map multipliers to exact potion thresholds (not stale win counts)', () => {
@@ -77,8 +77,8 @@ describe('Sequence (Potion Bottle permanent ladder)', () => {
       GAME_CONFIG.sequence.tiers.find((t) => t.multiplier === 15)!
         .potionsRequired,
     );
-    // Regression: old cheat passed 750 potions thinking it was 5x — that must not be 5x.
-    expect(sequenceMultiplierForWins(750)).toBe(15);
+    // Regression: stale cheat win-counts must not map to the labeled tier.
+    expect(sequenceMultiplierForWins(750)).not.toBe(5);
     expect(sequenceMultiplierForWins(potionsForMultiplier(5))).toBe(5);
   });
 

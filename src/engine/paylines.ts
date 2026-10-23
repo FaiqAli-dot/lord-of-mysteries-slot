@@ -94,7 +94,8 @@ export function evaluateLine(
   const pays = SYMBOLS[target].pays;
   const payIndex = count - 3; // 0→3oak, 1→4oak, 2→5oak
   const mult = pays[Math.min(payIndex, 2)]! * GAME_CONFIG.payScale;
-  const baseCredits = Math.floor(mult * lineBet);
+  // Round (not floor) so payScale can tune RTP without integer cliffs.
+  const baseCredits = Math.round(mult * lineBet);
   if (baseCredits <= 0) return null;
 
   const wildMultiplier =
