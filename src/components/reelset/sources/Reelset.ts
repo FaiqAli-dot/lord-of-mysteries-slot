@@ -14,7 +14,7 @@ import { GAME_CONFIG, type SymbolId } from '../../../config/gameConfig';
 import { sequenceProgress } from '../../../engine/sequence';
 import type { GameState } from '../../../engine/types';
 import { designSize, detectLayout, type LayoutKind } from '../../../ui/sizeConfig';
-import { playReelDrop, REEL_DROP, type DropMode } from '../../../ui/reelDrop';
+import { playReelDrop, type DropMode } from '../../../ui/reelDrop';
 import type { LayerManager } from '../../game/sources/LayerManager';
 import type { SpiritualityActivation } from '../../../engine/types';
 import type { LineWin, ScatterWin } from '../../../engine/types';
@@ -53,54 +53,58 @@ function assetUrl(rel: string): string {
   return `${base}game-assets/${rel.replace(/^\//, '')}`;
 }
 
-/** Desktop cells from reelDrop.json — SF pitch = width/height + indent. */
-const DROP_SYM = REEL_DROP.layout.reels.symbols;
-const DESKTOP_REEL = {
-  x: 1024,
-  y: 470,
-  cellW: DROP_SYM.width,
-  cellH: DROP_SYM.height,
-  gapX: DROP_SYM.indent,
-  gapY: DROP_SYM.indent,
-  scale: 1,
+/**
+ * Exact measurements of `reel-frame.png` (676×369 RGBA).
+ * Symbols land on section centers; mask clips to the inner window.
+ */
+const FRAME_NATIVE = {
+  path: 'ui/frames/reel-frame.png',
+  width: 676,
+  height: 369,
+  /** Inner reel window (mask) in image coordinates. */
+  inner: { x: 189, y: 83, w: 306, h: 239 },
+  /** 5 column section centers (x) in image coordinates. */
+  colCenters: [219.5, 280.5, 342.0, 403.5, 464.5] as const,
+  /** 4 row section centers (y) in image coordinates. */
+  rowCenters: [112.9, 172.6, 232.4, 292.1] as const,
+  colW: 61.2,
+  rowH: 59.75,
 } as const;
 
-/** 5×4 layout tuned so reels sit above plugin chrome (bottom ~12–15%). */
+const CHARACTER_NATIVE = {
+  path: 'characters/character-right.png',
+  width: 408,
+  height: 612,
+  /** Content bounding box used for visual centering. */
+  content: { x: 19, y: 33, w: 389, h: 545 },
+} as const;
+
+/**
+ * Layout in design space. `frame` is the center of the reel-frame sprite;
+ * `frameScale` maps native frame pixels → design pixels.
+ * Character sits to the right of the frame, facing the reels.
+ */
 const LAYOUT = {
   desktop: {
-    logo: { x: 1024, y: 72, fontSize: 42 },
-    reel: DESKTOP_REEL,
-    // Flanking the reel frame — inside safe design bounds (not clipped)
-    seqMeter: { x: 280, y: 220, w: 64, h: 480 },
-    spiritMeter: { x: 1768, y: 220, w: 64, h: 480 },
+    logo: { x: 1024, y: 64, fontSize: 40 },
+    frame: { x: 880, y: 500, scale: 2.05 },
+    character: { x: 1580, y: 520, height: 720 },
+    seqMeter: { x: 200, y: 200, w: 64, h: 480 },
+    spiritMeter: { x: 1880, y: 200, w: 64, h: 480 },
   },
   landscape: {
-    logo: { x: 1024, y: 64, fontSize: 38 },
-    reel: {
-      x: 1024,
-      y: 460,
-      cellW: Math.round(DESKTOP_REEL.cellW * 0.91),
-      cellH: Math.round(DESKTOP_REEL.cellH * 0.91),
-      gapX: 2,
-      gapY: 2,
-      scale: 0.95,
-    },
-    seqMeter: { x: 260, y: 200, w: 58, h: 460 },
-    spiritMeter: { x: 1788, y: 200, w: 58, h: 460 },
+    logo: { x: 1024, y: 56, fontSize: 36 },
+    frame: { x: 860, y: 490, scale: 1.95 },
+    character: { x: 1560, y: 510, height: 680 },
+    seqMeter: { x: 180, y: 190, w: 58, h: 460 },
+    spiritMeter: { x: 1900, y: 190, w: 58, h: 460 },
   },
   portrait: {
-    logo: { x: 540, y: 56, fontSize: 30 },
-    reel: {
-      x: 540,
-      y: 430,
-      cellW: Math.round(DESKTOP_REEL.cellW * 0.85),
-      cellH: Math.round(DESKTOP_REEL.cellH * 0.85),
-      gapX: 2,
-      gapY: 2,
-      scale: 0.92,
-    },
-    seqMeter: { x: 56, y: 170, w: 48, h: 400 },
-    spiritMeter: { x: 1024, y: 170, w: 48, h: 400 },
+    logo: { x: 540, y: 48, fontSize: 28 },
+    frame: { x: 460, y: 420, scale: 1.35 },
+    character: { x: 900, y: 430, height: 480 },
+    seqMeter: { x: 48, y: 160, w: 44, h: 360 },
+    spiritMeter: { x: 1032, y: 160, w: 44, h: 360 },
   },
 } as const;
 
@@ -135,11 +139,16 @@ export class PixiStage {
   private moteTex!: Texture;
 
   private logo!: Text;
-  private reelFrame!: Graphics;
+  private reelFrame!: Sprite;
+  private character!: Sprite;
+  private cellsRoot = new Container();
   private reelMask = new Graphics();
   private cells: Sprite[][] = [];
   private cellHome: { x: number; y: number }[][] = [];
   private cellStepH = 140;
+  /** Current section size in design pixels (for fitCell). */
+  private cellW = 110;
+  private cellH = 108;
   private dropping = false;
   private seqMeter!: Sprite;
   private spiritMeter!: Sprite;
@@ -211,6 +220,8 @@ export class PixiStage {
     const urls = [
       assetUrl('backgrounds/bg_gothic_library_full.jpg'),
       assetUrl('ui/meters/ui_spirituality_meter.png'),
+      assetUrl(FRAME_NATIVE.path),
+      assetUrl(CHARACTER_NATIVE.path),
       ...Object.values(SYMBOL_PATH).map((p) => assetUrl(p)),
     ];
     await Assets.load(urls);
@@ -250,9 +261,18 @@ export class PixiStage {
     this.logo.anchor.set(0.5);
     this.uiLayer.addChild(this.logo);
 
-    this.reelFrame = new Graphics();
+    // Character sits beside the frame (drawn first so the frame can overlap its left edge).
+    this.character = new Sprite(Texture.from(assetUrl(CHARACTER_NATIVE.path)));
+    this.character.anchor.set(0.5);
+    this.reelLayer.addChild(this.character);
+
+    this.reelFrame = new Sprite(Texture.from(assetUrl(FRAME_NATIVE.path)));
+    this.reelFrame.anchor.set(0.5);
     this.reelLayer.addChild(this.reelFrame);
-    this.reelMask.alpha = 0; // SF reelsMask: clip only, not visible
+
+    // Symbols live in cellsRoot; mask clips to the frame's inner window only.
+    this.reelMask.alpha = 0;
+    this.reelLayer.addChild(this.cellsRoot);
     this.reelLayer.addChild(this.reelMask);
     for (let r = 0; r < GAME_CONFIG.reels; r++) {
       this.cells[r] = [];
@@ -260,7 +280,7 @@ export class PixiStage {
         const s = new Sprite(Texture.EMPTY);
         s.anchor.set(0.5);
         this.cells[r][row] = s;
-        this.reelLayer.addChild(s);
+        this.cellsRoot.addChild(s);
       }
     }
 
@@ -465,37 +485,44 @@ export class PixiStage {
     this.logo.position.set(L.logo.x, L.logo.y);
     this.logo.style.fontSize = L.logo.fontSize;
 
-    const { cellW, cellH, gapX, gapY, scale } = L.reel;
-    const gridW = GAME_CONFIG.reels * cellW + (GAME_CONFIG.reels - 1) * gapX;
-    const gridH = GAME_CONFIG.rows * cellH + (GAME_CONFIG.rows - 1) * gapY;
-    const ox = L.reel.x - (gridW * scale) / 2;
-    const oy = L.reel.y - (gridH * scale) / 2;
+    const frameScale = L.frame.scale;
+    this.reelFrame.position.set(L.frame.x, L.frame.y);
+    this.reelFrame.scale.set(frameScale);
 
-    this.reelFrame.clear();
-    this.reelFrame.lineStyle(4, 0xc4a35a, 0.9);
-    this.reelFrame.beginFill(0x0a0908, 0.5);
-    this.reelFrame.drawRoundedRect(ox - 16, oy - 16, gridW * scale + 32, gridH * scale + 32, 12);
-    this.reelFrame.endFill();
+    // Map native frame image coords → design space (sprite centered at L.frame).
+    const frameLeft = L.frame.x - (FRAME_NATIVE.width * frameScale) / 2;
+    const frameTop = L.frame.y - (FRAME_NATIVE.height * frameScale) / 2;
 
-    // Clip symbols while falling above/below the visible window (SF reelsMask).
+    // Clip symbols to the exact inner reel window so they drop in/out behind the frame.
+    const maskX = frameLeft + FRAME_NATIVE.inner.x * frameScale;
+    const maskY = frameTop + FRAME_NATIVE.inner.y * frameScale;
+    const maskW = FRAME_NATIVE.inner.w * frameScale;
+    const maskH = FRAME_NATIVE.inner.h * frameScale;
     this.reelMask.clear();
     this.reelMask.beginFill(0xffffff);
-    this.reelMask.drawRect(ox - 8, oy - 8, gridW * scale + 16, gridH * scale + 16);
+    this.reelMask.drawRect(maskX, maskY, maskW, maskH);
     this.reelMask.endFill();
 
-    this.cellStepH = (cellH + gapY) * scale;
+    this.cellW = FRAME_NATIVE.colW * frameScale;
+    this.cellH = FRAME_NATIVE.rowH * frameScale;
+    this.cellStepH = this.cellH;
     this.cellHome = [];
     for (let r = 0; r < GAME_CONFIG.reels; r++) {
       this.cellHome[r] = [];
       for (let row = 0; row < GAME_CONFIG.rows; row++) {
         const s = this.cells[r][row]!;
-        const x = ox + (r * (cellW + gapX) + cellW / 2) * scale;
-        const y = oy + (row * (cellH + gapY) + cellH / 2) * scale;
+        const x = frameLeft + FRAME_NATIVE.colCenters[r]! * frameScale;
+        const y = frameTop + FRAME_NATIVE.rowCenters[row]! * frameScale;
         this.cellHome[r]![row] = { x, y };
         if (!this.dropping) s.position.set(x, y);
-        this.fitCell(s, cellW * scale * 0.9, cellH * scale * 0.9);
+        this.fitCell(s, this.cellW * 0.92, this.cellH * 0.92);
       }
     }
+
+    // Klein on the throne — right of the reel frame, facing the reels.
+    const charScale = L.character.height / CHARACTER_NATIVE.height;
+    this.character.scale.set(charScale);
+    this.character.position.set(L.character.x, L.character.y);
 
     this.placeMeter(this.seqMeter, this.seqFill, this.seqFrame, this.seqLabel, L.seqMeter, 0xc4a35a);
     this.placeMeter(
@@ -506,8 +533,8 @@ export class PixiStage {
       L.spiritMeter,
       0x3ecfcf,
     );
-    this.winBanner.position.set(this.designW / 2, L.reel.y);
-    this.featureBanner.position.set(this.designW / 2, L.reel.y - 120);
+    this.winBanner.position.set(this.designW / 2, L.frame.y);
+    this.featureBanner.position.set(this.designW / 2, L.frame.y - 120);
   }
 
   private placeMeter(
@@ -555,8 +582,7 @@ export class PixiStage {
         const s = this.cells[r]?.[row];
         if (!s) continue;
         s.texture = Texture.from(assetUrl(SYMBOL_PATH[id]));
-        const L = LAYOUT[this.layoutKind].reel;
-        this.fitCell(s, L.cellW * L.scale * 0.9, L.cellH * L.scale * 0.9);
+        this.fitCell(s, this.cellW * 0.92, this.cellH * 0.92);
         const home = this.cellHome[r]?.[row];
         if (home && !this.dropping) s.position.set(home.x, home.y);
       }
@@ -564,19 +590,20 @@ export class PixiStage {
   }
 
   private setColumnTextures(grid: SymbolId[][], reel: number): void {
-    const L = LAYOUT[this.layoutKind].reel;
     for (let row = 0; row < GAME_CONFIG.rows; row++) {
       const id = grid[reel]?.[row];
       if (!id) continue;
       const s = this.cells[reel]?.[row];
       if (!s) continue;
       s.texture = Texture.from(assetUrl(SYMBOL_PATH[id]));
-      this.fitCell(s, L.cellW * L.scale * 0.9, L.cellH * L.scale * 0.9);
+      this.fitCell(s, this.cellW * 0.92, this.cellH * 0.92);
     }
   }
 
-  private setReelMask(enabled: boolean): void {
-    this.reelLayer.mask = enabled ? this.reelMask : null;
+  private setReelMask(_enabled: boolean): void {
+    // Always clip symbols to the inner window so drop-in / land / drop-out stay inside the frame.
+    // Mask targets cellsRoot only — ornate frame + character stay fully visible.
+    this.cellsRoot.mask = this.reelMask;
   }
 
   /**
@@ -684,7 +711,8 @@ export class PixiStage {
     );
 
     const d = opts.feature.detail;
-    const L = LAYOUT[this.layoutKind].reel;
+    const fitW = this.cellW * 0.92;
+    const fitH = this.cellH * 0.92;
 
     if (opts.feature.effect === 'GRAFTING') {
       const targetId =
@@ -704,7 +732,7 @@ export class PixiStage {
       const seedCell = this.cells[seed.reel]?.[seed.row];
       if (seedCell) {
         seedCell.texture = tex;
-        this.fitCell(seedCell, L.cellW * L.scale * 0.9, L.cellH * L.scale * 0.9);
+        this.fitCell(seedCell, fitW, fitH);
         await flashCell(seedCell, 0xffe08a, this.reducedMotion);
       }
       await new Promise((r) => window.setTimeout(r, this.reducedMotion ? 120 : 280));
@@ -716,7 +744,7 @@ export class PixiStage {
         const cell = this.cells[p.reel]?.[p.row];
         if (!cell) continue;
         cell.texture = tex;
-        this.fitCell(cell, L.cellW * L.scale * 0.9, L.cellH * L.scale * 0.9);
+        this.fitCell(cell, fitW, fitH);
         await flashCell(cell, 0xb48cff, this.reducedMotion);
       }
     } else {
@@ -728,7 +756,7 @@ export class PixiStage {
           if (!cell) continue;
           const id = opts.to[r]![row]!;
           cell.texture = Texture.from(assetUrl(SYMBOL_PATH[id]));
-          this.fitCell(cell, L.cellW * L.scale * 0.9, L.cellH * L.scale * 0.9);
+          this.fitCell(cell, fitW, fitH);
           await flashCell(cell, 0x6ef0e8, this.reducedMotion);
         }
       }
