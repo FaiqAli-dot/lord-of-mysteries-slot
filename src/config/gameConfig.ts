@@ -6,8 +6,8 @@
  * - BASE: line/scatter credits from the base outcome before Sequence/Spirituality increments
  * - SEQUENCE: incremental credits from Sequence multiplier above 1x
  * - SPIRITUALITY: incremental credits attributable to Spirituality effects
- *   (extra wilds from Glove/Locked Wild, Grafting transformations, Creeping Hunger respin delta,
- *    Blind Stupidity does not change payouts — zero incremental)
+ *   (extra wilds from Glove/Locked Wild, Grafting, Blind Stupidity high upgrades,
+ *    Creeping Hunger respin delta)
  * - BONUS: all credits awarded inside Tarot Club / Crimson Moon / Fool's Miracles
  *   (including pick rewards and bonus-spin line wins). Sequence increments during bonus spins
  *   are still attributed to SEQUENCE (the delta only); the 1x portion of those wins is BONUS.
@@ -48,7 +48,7 @@ export interface SymbolDef {
   pays: [number, number, number];
   isWild?: boolean;
   isScatter?: boolean;
-  /** Sequence marker — does not form line wins; advances Sequence when on a winning line path. */
+  /** Sequence Sigil — non-paying line-breaker / strip filler. Does NOT advance the Sequence meter. */
   isSequenceMarker?: boolean;
   /** Spirituality charge symbol. */
   isSpirit?: boolean;
@@ -194,7 +194,7 @@ export const SCATTER_PAYS: Record<number, number> = {
  * Reel strips — length and composition tuned for ~96% RTP.
  * Rows = 4 visible; stop index is top-of-window.
  * Design: heavy lows with mixed order to reduce natural line hits; sparse highs/wilds;
- * one SCATTER per reel (~1/72) so P(3+) ≈ few × 10^-3 and P(5) remains rare but reachable.
+ * two SCATTER stops per reel (length 77) so P(3+) ≈ few × 10^-3 and P(5) remains rare.
  */
 export const REEL_STRIPS: SymbolId[][] = [
   // Reel 0 (72)
@@ -282,12 +282,13 @@ export const GAME_CONFIG = {
    * Global scale applied to line-pay multiples at evaluation time.
    * Used for fine RTP tuning without rewriting the whole table.
    */
-  payScale: 1.18,
+  /** Fine RTP dial — set after Tarot sim fidelity + Sequence/Spirituality retune. */
+  payScale: 1.155,
 
   wild: {
-    /** Fool's Mirror expands to fill its reel when ≥1 wild lands and a line can use it. */
+    /** Fool's Mirror expands to fill its reel when ≥1 Wild lands and the reel has no Scatter. */
     expandWhenPresent: true,
-    /** 2x applies once per line win that uses the expanded wild reel. */
+    /** 2× applies once per line win that uses any expanded wild reel (not stacked per reel). */
     expandedMultiplier: 2,
     /** Wild never substitutes for Scatter / Sequence / Spirit. */
     cannotSubstitute: ['SCATTER', 'SEQUENCE', 'SPIRIT'] as SymbolId[],
@@ -304,37 +305,55 @@ export const GAME_CONFIG = {
   },
 
   sequence: {
+    /**
+     * Player-facing label. Internal id stays "sequence" for APIs/tests.
+     * This is a ritual progress meter — not a simulation of Beyonder Sequence potions.
+     */
+    displayName: 'Sequence Resonance',
+    displayHint:
+      'Rises once per paying spin. This spin uses the current tier; the meter advances after. Resets when a bonus ends.',
     maxMultiplier: 15,
-    /** Advance once per paying winning combination (line or scatter pay) in the round. */
+    /**
+     * When true: advance once per spin that has ≥1 winning combination
+     * (not once per individual line — that would spike Sequence RTP).
+     */
     advanceOnWinningCombination: true,
-    /** Reset after every completed bonus (return to base). */
+    /** Reset after every completed bonus (return to base). Wired via bonuses.resetSequenceOnComplete. */
     resetAfterBonus: true,
-    /** Persist through current paid round and through bonus spins until bonus completes. */
+    /** Persist through bonus spins until bonus completes. */
     persistThroughBonus: true,
     /**
-     * Slow tiers: Sequence only resets after bonuses, so thresholds must be high
-     * enough that average multiplier between bonuses stays modest (~1.1–1.4).
+     * Tuned with Tarot correctly resetting Sequence (old sim skipped that reset).
+     * ~1% bonus frequency ≈ 60–70 paying spins between typical bonuses, so 2×
+     * needs a mild no-bonus streak; 8×+ needs an unusual drought.
      */
     tiers: [
       { winsRequired: 0, multiplier: 1 },
-      { winsRequired: 200, multiplier: 2 },
-      { winsRequired: 450, multiplier: 3 },
-      { winsRequired: 750, multiplier: 5 },
-      { winsRequired: 1100, multiplier: 8 },
-      { winsRequired: 1500, multiplier: 12 },
-      { winsRequired: 2000, multiplier: 15 },
+      { winsRequired: 115, multiplier: 2 },
+      { winsRequired: 230, multiplier: 3 },
+      { winsRequired: 360, multiplier: 5 },
+      { winsRequired: 520, multiplier: 8 },
+      { winsRequired: 720, multiplier: 12 },
+      { winsRequired: 1000, multiplier: 15 },
     ] as SequenceTier[],
   },
 
   spirituality: {
-    threshold: 12,
+    displayName: 'Spirituality',
+    displayHint:
+      'Charges from paying spins and Spirit Embers. When full, the next eligible spin awakens one effect, then the meter resets.',
+    /**
+     * Raised from 12 → 18 after Blind Stupidity became a real payout modifier
+     * and Grafting became a seed+neighbor Wild spread.
+     */
+    threshold: 18,
     /** Charge per winning spin (one advance event), not per line. */
     chargePerWin: 1,
     /** Charge also from SPIRIT symbols on the grid (each). */
     chargePerSpiritSymbol: 1,
     /** Earn charge during bonuses. */
     chargeInBonus: true,
-    /** Carry meter from base into bonus. */
+    /** Carry meter from base into bonus (always; charge state is session-global). */
     carryIntoBonus: true,
     /** No overflow carried past activation. */
     overflowCarried: false,
@@ -345,63 +364,62 @@ export const GAME_CONFIG = {
         id: 'GRAFTING',
         name: 'Grafting',
         description:
-          'One random reel is transformed into a single random paying symbol for this spin only. Cannot create Scatters. Restored after evaluation.',
-        weight: 20,
+          'If a Fool’s Mirror is already on the grid, it spreads to orthogonal neighbors. If none landed, one Wild is placed without spreading. Scatters, Sequence Sigils, and Spirit Embers are never overwritten.',
+        weight: 14,
       },
       {
         id: 'BLIND_STUPIDITY',
         name: 'Blind Stupidity',
         description:
-          'Three random positions are veiled. Underlying symbols are unchanged and still determine wins; revealed on resolution.',
-        weight: 20,
+          'One random eligible cell upgrades into a high-paying symbol for this spin. Scatters, Wilds, and special markers are never overwritten.',
+        weight: 12,
       },
       {
         id: 'CREEPING_HUNGER',
         name: 'Creeping Hunger',
         description:
-          'One respin: high symbols and Wilds are preserved; other eligible positions respin once. No recursive respins.',
-        weight: 20,
+          'One respin: highs, Wilds, Scatters, Sequence, and Spirit stay; other positions respin once. No recursive respins.',
+        weight: 24,
       },
       {
         id: 'GLOVE',
         name: 'Glove',
         description:
-          'Transforms one eligible non-special symbol into Wild before final evaluation. Does not transform Scatters.',
-        weight: 20,
+          'Transforms one eligible non-special symbol into Wild before final evaluation. Never transforms Scatter, Sequence, Spirit, or existing Wild.',
+        weight: 26,
       },
       {
         id: 'LOCKED_WILD',
         name: 'Locked Wild',
         description:
-          'Places a Locked Wild at an eligible position for this spin and the next applicable spin, then expires.',
-        weight: 20,
+          'Places a Locked Wild at an eligible cell for this spin and the next, then expires. Never overwrites Scatter, Sequence, or Spirit.',
+        weight: 24,
       },
     ] as SpiritualityEffectDef[],
     grafting: {
-      /**
-       * Eligible targets for grafting (no scatters / specials).
-       * Weighted toward lows so a full-reel graft does not dominate RTP.
-       */
-      eligibleSymbols: [
-        'JACK',
-        'JACK',
-        'QUEEN',
-        'QUEEN',
-        'KING',
-        'KING',
-        'ACE',
-        'ACE',
-        'WORLD',
-        'HANGED',
-        'WHEEL',
-        'PRIESTESS',
-        'MAGICIAN',
-        'FOOL',
-      ] as SymbolId[],
+      /** Include the seed cell itself as Wild (always applied in engine). */
+      includeSeed: true,
+      /** Convert up/down/left/right neighbors to Wild. */
+      orthogonal: true,
+      /** Also convert diagonal neighbors (stronger graft). */
+      diagonals: false,
+      /** Cells that grafting must never overwrite. */
+      cannotTransform: ['SCATTER', 'SEQUENCE', 'SPIRIT'] as SymbolId[],
     },
     creepingHunger: {
-      /** Symbols preserved across the hunger respin. */
-      preserve: ['FOOL', 'MAGICIAN', 'PRIESTESS', 'WHEEL', 'HANGED', 'WORLD', 'WILD'] as SymbolId[],
+      /** Symbols preserved across the hunger respin (Scatter also forced in code). */
+      preserve: [
+        'FOOL',
+        'MAGICIAN',
+        'PRIESTESS',
+        'WHEEL',
+        'HANGED',
+        'WORLD',
+        'WILD',
+        'SEQUENCE',
+        'SPIRIT',
+        'SCATTER',
+      ] as SymbolId[],
     },
     glove: {
       cannotTransform: ['SCATTER', 'SEQUENCE', 'SPIRIT', 'WILD'] as SymbolId[],
@@ -409,9 +427,24 @@ export const GAME_CONFIG = {
     lockedWild: {
       /** Duration in applicable spins including creation spin. */
       durationSpins: 2,
+      cannotPlaceOver: ['SCATTER', 'SEQUENCE', 'SPIRIT'] as SymbolId[],
     },
     blindStupidity: {
-      concealCount: 3,
+      /**
+       * Cells upgraded to highs. Reduced from 3 → 1 so Blind remains a real
+       * math event without dominating Spirituality category RTP.
+       */
+      transformCount: 1,
+      /** High-paying targets (weighted equally when picked). */
+      highSymbols: [
+        'FOOL',
+        'MAGICIAN',
+        'PRIESTESS',
+        'WHEEL',
+        'HANGED',
+        'WORLD',
+      ] as SymbolId[],
+      cannotTransform: ['SCATTER', 'SEQUENCE', 'SPIRIT', 'WILD'] as SymbolId[],
     },
   },
 
@@ -429,6 +462,7 @@ export const GAME_CONFIG = {
     tarotClub: {
       id: 'TAROT_CLUB' as BonusModeId,
       name: 'Tarot Club Gathering',
+      /** Gathering free spins on the reels (each spin draws one reward). */
       selections: 5,
       /** Pick outcomes — weights sum for discrete distribution. Credits are multiples of total bet. */
       rewards: [

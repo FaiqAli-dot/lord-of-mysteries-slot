@@ -1,0 +1,30 @@
+{
+  "name": "root",
+  "children": [
+    {
+      "name": "game",
+      "children": [
+        {
+          "name": "camera",
+          "children": [
+            { "name": "background" },
+            { "name": "fx" },
+            { "name": "reelset" },
+            { "name": "meters" },
+            { "name": "logo" }
+          ]
+        }
+      ]
+    },
+    { "name": "overlay" },
+    {
+      "name": "popups",
+      "children": [
+        { "name": "celebration" },
+        { "name": "bonus" }
+      ]
+    },
+    { "name": "cheats" },
+    { "name": "preloader" }
+  ]
+}

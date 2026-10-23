@@ -1,0 +1,25 @@
+{
+  "entry": "Start",
+  "states": [
+    "Start",
+    "Load",
+    "Idle",
+    "Spin",
+    "SpinSymbols",
+    "SpinStart",
+    "SpinStop",
+    "FeatureReveal",
+    "Celebration",
+    "Bonus",
+    "BonusSelect",
+    "BonusActive",
+    "BonusSummary"
+  ],
+  "sequences": {
+    "Start": ["Load", "Idle"],
+    "Spin": ["SpinSymbols", "FeatureReveal", "Celebration", "Bonus", "Idle"],
+    "SpinSymbols": ["SpinStart", "SpinStop"],
+    "Idle": [],
+    "Bonus": ["BonusSelect", "BonusActive", "BonusSummary"]
+  }
+}

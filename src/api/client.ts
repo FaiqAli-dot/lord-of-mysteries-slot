@@ -1,6 +1,16 @@
-import type { BonusModeId } from '../config/gameConfig';
+import type { BonusModeId, SpiritualityEffectId } from '../config/gameConfig';
+import type { Grid } from '../engine/types';
 import type { PublicGameState } from './publicState';
 import { resolveApiBase, SESSION_STORAGE_KEY, tunnelRequestHeaders } from './apiConfig';
+
+export type DebugOp =
+  | { op: 'forceGrid'; grid: Grid }
+  | { op: 'fillSpirituality' }
+  | { op: 'forceSpiritualityEffect'; effect: SpiritualityEffectId }
+  | { op: 'forceScatters'; count: number }
+  | { op: 'forceWildExpand' }
+  | { op: 'setSequenceWins'; wins: number }
+  | { op: 'clearForces' };
 
 export class ApiError extends Error {
   constructor(
@@ -154,6 +164,13 @@ export class PathwaysApi {
     return request(this.base, `/api/session/${encodeURIComponent(id)}/mute`, {
       method: 'POST',
       body: JSON.stringify({ muted }),
+    });
+  }
+
+  debug(id: string, body: DebugOp): Promise<SessionResponse> {
+    return request(this.base, `/api/session/${encodeURIComponent(id)}/debug`, {
+      method: 'POST',
+      body: JSON.stringify(body),
     });
   }
 }

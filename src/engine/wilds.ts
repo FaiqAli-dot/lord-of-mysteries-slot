@@ -69,17 +69,66 @@ export function applyGlove(
   return next;
 }
 
+/**
+ * Grafting step 1: ensure exactly one seed Wild exists (prefer a natural Wild).
+ * Returns the seed position and whether we had to place it.
+ */
+export function ensureGraftSeed(
+  grid: Grid,
+  seed: { reel: number; row: number },
+): { grid: Grid; seed: { reel: number; row: number }; placed: boolean } {
+  const next = cloneGrid(grid);
+  const wasWild = next[seed.reel]![seed.row] === 'WILD';
+  if (!wasWild) next[seed.reel]![seed.row] = 'WILD';
+  return { grid: next, seed, placed: !wasWild };
+}
+
+/**
+ * Grafting step 2: seed Wild spreads — neighboring cells become WILD.
+ * Seed itself is already Wild; only neighbors are listed in `transformed`.
+ */
 export function applyGrafting(
   grid: Grid,
-  reel: number,
-  symbol: SymbolId,
-): Grid {
+  seed: { reel: number; row: number },
+): { grid: Grid; transformed: { reel: number; row: number }[] } {
+  const cfg = GAME_CONFIG.spirituality.grafting;
+  const blocked = new Set(cfg.cannotTransform as readonly SymbolId[]);
   const next = cloneGrid(grid);
-  for (let row = 0; row < next[reel]!.length; row++) {
-    // Never overwrite scatters — grafting cannot create/bypass scatter triggers.
-    if (next[reel]![row] !== 'SCATTER') {
-      next[reel]![row] = symbol;
-    }
+  // Seed must be Wild before spread
+  if (next[seed.reel]?.[seed.row] && next[seed.reel]![seed.row] !== 'SCATTER') {
+    next[seed.reel]![seed.row] = 'WILD';
   }
-  return next;
+  const transformed: { reel: number; row: number }[] = [];
+
+  const offsets: { dr: number; drow: number }[] = [];
+  if (cfg.orthogonal) {
+    offsets.push(
+      { dr: -1, drow: 0 },
+      { dr: 1, drow: 0 },
+      { dr: 0, drow: -1 },
+      { dr: 0, drow: 1 },
+    );
+  }
+  if (cfg.diagonals) {
+    offsets.push(
+      { dr: -1, drow: -1 },
+      { dr: -1, drow: 1 },
+      { dr: 1, drow: -1 },
+      { dr: 1, drow: 1 },
+    );
+  }
+
+  for (const { dr, drow } of offsets) {
+    const reel = seed.reel + dr;
+    const row = seed.row + drow;
+    if (reel < 0 || reel >= next.length) continue;
+    if (row < 0 || row >= next[reel]!.length) continue;
+    const s = next[reel]![row]!;
+    if (blocked.has(s)) continue;
+    if (s === 'WILD') continue;
+    next[reel]![row] = 'WILD';
+    transformed.push({ reel, row });
+  }
+
+  return { grid: next, transformed };
 }

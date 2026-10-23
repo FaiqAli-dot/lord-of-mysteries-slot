@@ -1,5 +1,5 @@
-import type { BonusModeId } from '../config/gameConfig';
-import type { GameState } from '../engine/types';
+import type { BonusModeId, SpiritualityEffectId } from '../config/gameConfig';
+import type { GameState, Grid } from '../engine/types';
 import type { PublicGameState } from './publicState';
 import {
   PathwaysApi,
@@ -9,7 +9,7 @@ import {
 import { resolveApiBase, setStoredApiBase } from './apiConfig';
 
 function asGameState(pub: PublicGameState): GameState {
-  return { ...structuredClone(pub), forceGrid: null };
+  return structuredClone(pub);
 }
 
 /**
@@ -148,5 +148,35 @@ export class RemoteSession {
   setReducedMotion(v: boolean): void {
     if (this.state) this.state.reducedMotion = v;
     this.emit();
+  }
+
+  async debugForceGrid(grid: Grid): Promise<void> {
+    this.apply(await this.api.debug(this.requireId(), { op: 'forceGrid', grid }));
+  }
+
+  async debugFillSpirituality(): Promise<void> {
+    this.apply(await this.api.debug(this.requireId(), { op: 'fillSpirituality' }));
+  }
+
+  async debugForceSpiritualityEffect(effect: SpiritualityEffectId): Promise<void> {
+    this.apply(
+      await this.api.debug(this.requireId(), { op: 'forceSpiritualityEffect', effect }),
+    );
+  }
+
+  async debugForceScatters(count: number): Promise<void> {
+    this.apply(await this.api.debug(this.requireId(), { op: 'forceScatters', count }));
+  }
+
+  async debugForceWildExpand(): Promise<void> {
+    this.apply(await this.api.debug(this.requireId(), { op: 'forceWildExpand' }));
+  }
+
+  async debugSetSequenceWins(wins: number): Promise<void> {
+    this.apply(await this.api.debug(this.requireId(), { op: 'setSequenceWins', wins }));
+  }
+
+  async debugClearForces(): Promise<void> {
+    this.apply(await this.api.debug(this.requireId(), { op: 'clearForces' }));
   }
 }

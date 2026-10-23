@@ -23,9 +23,13 @@ export function createBonusRuntime(mode: BonusModeId): BonusRuntime {
   };
 
   switch (mode) {
-    case 'TAROT_CLUB':
-      base.tarotPicksRemaining = GAME_CONFIG.bonuses.tarotClub.selections;
+    case 'TAROT_CLUB': {
+      // Gathering free spins on the reels (same count as former pick selections).
+      const n = GAME_CONFIG.bonuses.tarotClub.selections;
+      base.spinsRemaining = n;
+      base.tarotPicksRemaining = n;
       break;
+    }
     case 'CRIMSON_MOON':
       base.spinsRemaining = GAME_CONFIG.bonuses.crimsonMoon.spins;
       break;

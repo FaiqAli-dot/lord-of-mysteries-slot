@@ -103,18 +103,8 @@ export function runSimulation(opts: {
     const a = emptyAttribution();
     let localSpin = rngBaseSpin;
 
-    if (mode === 'TAROT_CLUB') {
-      while (bonus.tarotPicksRemaining > 0) {
-        localSpin += 1;
-        const rng = new SeededRng(deriveSeed(seed, localSpin));
-        const r = resolveTarotPick(rng, bonus, bet);
-        bonus = r.bonus;
-        payout += r.creditsAwarded;
-        a.BONUS += r.creditsAwarded;
-      }
-      return { payout, attribution: a };
-    }
-
+    // All bonuses use gathering/free spins via resolveSpin (matches SlotGame.bonusSpin).
+    // Tarot Club additionally draws one table reward after each reel result.
     while (bonus.spinsRemaining > 0) {
       bonus.spinsRemaining -= 1;
       bonus.spinsPlayed += 1;
@@ -131,7 +121,11 @@ export function runSimulation(opts: {
       const bonusMult =
         mode === 'CRIMSON_MOON'
           ? bonus.moonMultiplier
-          : bonus.miracleMultiplier;
+          : mode === 'FOOLS_MIRACLES'
+            ? bonus.miracleMultiplier
+            : mode === 'TAROT_CLUB'
+              ? Math.max(1, bonus.tarotRunningMultiplier)
+              : 1;
 
       const result = resolveSpin({
         rng,
@@ -148,9 +142,9 @@ export function runSimulation(opts: {
         allowWildExpansion: mode !== 'CRIMSON_MOON',
         stickyWildReels: bonus.stickyWildReels,
         stickyWildCells: bonus.stickyWildCells,
-        tarotWildEnhance: false,
+        tarotWildEnhance: mode === 'TAROT_CLUB' && bonus.tarotWildEnhance,
         allowSpirituality: true,
-        chargeInBonus: true,
+        chargeInBonus: GAME_CONFIG.spirituality.chargeInBonus,
       });
 
       sequenceWins = result.sequenceWinsAfter;
@@ -169,10 +163,22 @@ export function runSimulation(opts: {
         spiritualityByEffect[e] = (spiritualityByEffect[e] ?? 0) + 1;
       }
 
-      bonus = tryRetrigger(bonus, result.scatterCount);
-      const hadPay = result.payout > 0;
-      if (mode === 'CRIMSON_MOON') bonus = advanceMoonMultiplier(bonus, hadPay);
-      if (mode === 'FOOLS_MIRACLES') bonus = advanceMiracleMultiplier(bonus, hadPay);
+      if (mode === 'TAROT_CLUB') {
+        const pick = resolveTarotPick(rng, bonus, bet);
+        bonus = pick.bonus;
+        if (pick.creditsAwarded > 0) {
+          payout += pick.creditsAwarded;
+          a.BONUS += pick.creditsAwarded;
+        }
+        if (bonus.tarotPicksRemaining > bonus.spinsRemaining) {
+          bonus.spinsRemaining = bonus.tarotPicksRemaining;
+        }
+      } else {
+        bonus = tryRetrigger(bonus, result.scatterCount);
+        const hadPay = result.payout > 0;
+        if (mode === 'CRIMSON_MOON') bonus = advanceMoonMultiplier(bonus, hadPay);
+        if (mode === 'FOOLS_MIRACLES') bonus = advanceMiracleMultiplier(bonus, hadPay);
+      }
       bonus.totalWon += result.payout;
     }
 

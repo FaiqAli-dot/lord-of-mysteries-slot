@@ -6,7 +6,7 @@ import {
 import type { Grid, LockedWildState, SpiritualityActivation } from './types';
 import type { SeededRng } from './rng';
 import { cloneGrid, respinEligible } from './reels';
-import { applyGlove, applyGrafting } from './wilds';
+import { applyGlove, applyGrafting, ensureGraftSeed } from './wilds';
 
 export function addCharge(current: number, amount: number): number {
   if (amount <= 0) return current;
@@ -24,6 +24,7 @@ export function activateSpirituality(
   rng: SeededRng,
   grid: Grid,
   lockedWilds: LockedWildState[],
+  forceEffect?: SpiritualityEffectId | null,
 ): {
   charge: number;
   activation: SpiritualityActivation;
@@ -36,9 +37,12 @@ export function activateSpirituality(
   spiritualityIncrementalHint: number;
 } {
   const effects = GAME_CONFIG.spirituality.effects;
-  const weights = effects.map((e) => e.weight);
-  const idx = rng.weightedIndex(weights);
-  const effect = effects[idx]!;
+  const forced = forceEffect
+    ? effects.find((e) => e.id === forceEffect)
+    : undefined;
+  const effect =
+    forced ??
+    effects[rng.weightedIndex(effects.map((e) => e.weight))]!;
 
   let nextGrid = cloneGrid(grid);
   let nextLocked = [...lockedWilds];
@@ -50,26 +54,77 @@ export function activateSpirituality(
 
   switch (effect.id as SpiritualityEffectId) {
     case 'GRAFTING': {
-      const reel = rng.int(0, GAME_CONFIG.reels - 1);
-      const symbol = rng.pick(GAME_CONFIG.spirituality.grafting.eligibleSymbols);
-      nextGrid = applyGrafting(nextGrid, reel, symbol);
-      graftedReel = reel;
-      graftedSymbol = symbol;
-      detail.reel = reel;
-      detail.symbol = symbol;
+      /**
+       * Real spin grid first. Then:
+       * - Natural Wild present → that seed spreads to orthogonal neighbors.
+       * - No Wild → place ONE Wild (no spread) so Grafting still does something
+       *   without the full neighbor EV every time.
+       */
+      const blocked = new Set(
+        GAME_CONFIG.spirituality.grafting.cannotTransform as readonly SymbolId[],
+      );
+      const naturalWilds: { reel: number; row: number }[] = [];
+      const eligible: { reel: number; row: number }[] = [];
+      for (let r = 0; r < nextGrid.length; r++) {
+        for (let row = 0; row < nextGrid[r]!.length; row++) {
+          const s = nextGrid[r]![row]!;
+          if (s === 'WILD') naturalWilds.push({ reel: r, row });
+          if (!blocked.has(s)) eligible.push({ reel: r, row });
+        }
+      }
+      if (naturalWilds.length > 0) {
+        const seed = rng.pick(naturalWilds);
+        const seeded = ensureGraftSeed(nextGrid, seed);
+        nextGrid = seeded.grid;
+        const spread = applyGrafting(nextGrid, seeded.seed);
+        nextGrid = spread.grid;
+        graftedReel = seeded.seed.reel;
+        graftedSymbol = 'WILD';
+        detail.reel = seeded.seed.reel;
+        detail.row = seeded.seed.row;
+        detail.seedPlaced = false;
+        detail.spread = true;
+        detail.seed = seeded.seed;
+        detail.positions = spread.transformed;
+        detail.symbol = 'WILD';
+      } else if (eligible.length > 0) {
+        const seed = rng.pick(eligible);
+        const seeded = ensureGraftSeed(nextGrid, seed);
+        nextGrid = seeded.grid;
+        graftedReel = seeded.seed.reel;
+        graftedSymbol = 'WILD';
+        detail.reel = seeded.seed.reel;
+        detail.row = seeded.seed.row;
+        detail.seedPlaced = seeded.placed;
+        detail.spread = false;
+        detail.seed = seeded.seed;
+        detail.positions = [];
+        detail.symbol = 'WILD';
+      }
       break;
     }
     case 'BLIND_STUPIDITY': {
-      const positions: { reel: number; row: number }[] = [];
-      for (let r = 0; r < GAME_CONFIG.reels; r++) {
-        for (let row = 0; row < GAME_CONFIG.rows; row++) {
-          positions.push({ reel: r, row });
+      // Upgrade random eligible cells into high-paying symbols (affects wins).
+      const cfg = GAME_CONFIG.spirituality.blindStupidity;
+      const blocked = new Set(cfg.cannotTransform as readonly SymbolId[]);
+      const eligible: { reel: number; row: number }[] = [];
+      for (let r = 0; r < nextGrid.length; r++) {
+        for (let row = 0; row < nextGrid[r]!.length; row++) {
+          const s = nextGrid[r]![row]!;
+          if (!blocked.has(s)) eligible.push({ reel: r, row });
         }
       }
-      const shuffled = rng.shuffle(positions);
-      concealed = shuffled.slice(0, GAME_CONFIG.spirituality.blindStupidity.concealCount);
-      detail.positions = concealed;
-      // Symbols unchanged — visual only.
+      const shuffled = rng.shuffle(eligible);
+      const picks = shuffled.slice(0, cfg.transformCount);
+      const upgrades: { reel: number; row: number; symbol: SymbolId }[] = [];
+      for (const pos of picks) {
+        const symbol = rng.pick(cfg.highSymbols as readonly SymbolId[]);
+        nextGrid[pos.reel]![pos.row] = symbol;
+        upgrades.push({ reel: pos.reel, row: pos.row, symbol });
+      }
+      detail.positions = upgrades.map(({ reel, row }) => ({ reel, row }));
+      detail.upgrades = upgrades;
+      // No veil — grid itself changed (concealed stays null).
       break;
     }
     case 'CREEPING_HUNGER': {
@@ -79,13 +134,6 @@ export function activateSpirituality(
       const mask: boolean[][] = nextGrid.map((reel) =>
         reel.map((s) => preserve.has(s)),
       );
-      // Also preserve scatters so hunger cannot invent/remove scatter triggers oddly —
-      // underlying rule: preserve qualifying; respin rest once from strips.
-      for (let r = 0; r < nextGrid.length; r++) {
-        for (let row = 0; row < nextGrid[r]!.length; row++) {
-          if (nextGrid[r]![row] === 'SCATTER') mask[r]![row] = true;
-        }
-      }
       nextGrid = respinEligible(nextGrid, mask, rng);
       hungerRespinDone = true;
       detail.preserved = true;
@@ -111,23 +159,32 @@ export function activateSpirituality(
       break;
     }
     case 'LOCKED_WILD': {
+      const blocked = new Set(
+        GAME_CONFIG.spirituality.lockedWild.cannotPlaceOver as readonly SymbolId[],
+      );
       const eligible: { reel: number; row: number }[] = [];
       for (let r = 0; r < nextGrid.length; r++) {
         for (let row = 0; row < nextGrid[r]!.length; row++) {
-          if (nextGrid[r]![row] !== 'SCATTER') eligible.push({ reel: r, row });
+          const s = nextGrid[r]![row]!;
+          if (!blocked.has(s)) eligible.push({ reel: r, row });
         }
       }
       if (eligible.length > 0) {
         const pos = rng.pick(eligible);
         nextGrid[pos.reel]![pos.row] = 'WILD';
+        const duration = GAME_CONFIG.spirituality.lockedWild.durationSpins;
+        // One locked wild per cell — refresh duration instead of stacking entries.
+        nextLocked = nextLocked.filter(
+          (lw) => !(lw.reel === pos.reel && lw.row === pos.row),
+        );
         nextLocked.push({
           reel: pos.reel,
           row: pos.row,
-          remainingSpins: GAME_CONFIG.spirituality.lockedWild.durationSpins,
+          remainingSpins: duration,
         });
         detail.reel = pos.reel;
         detail.row = pos.row;
-        detail.duration = GAME_CONFIG.spirituality.lockedWild.durationSpins;
+        detail.duration = duration;
       }
       break;
     }

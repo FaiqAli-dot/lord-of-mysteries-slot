@@ -1,4 +1,9 @@
-import { GAME_CONFIG, type BonusModeId } from '../config/gameConfig';
+import {
+  GAME_CONFIG,
+  type BonusModeId,
+  type SpiritualityEffectId,
+  type SymbolId,
+} from '../config/gameConfig';
 import type {
   Attribution,
   GameState,
@@ -7,7 +12,7 @@ import type {
   TarotPickReward,
 } from './types';
 import { SeededRng, deriveSeed } from './rng';
-import { emptyGrid } from './reels';
+import { spinReels } from './reels';
 import { emptyAttribution, resolveSpin } from './pipeline';
 import {
   createBonusRuntime,
@@ -20,23 +25,39 @@ import {
 } from './bonuses';
 import { resetSequence, sequenceMultiplierForWins } from './sequence';
 
+function fillGrid(sym: SymbolId): Grid {
+  return Array.from({ length: GAME_CONFIG.reels }, () =>
+    Array.from({ length: GAME_CONFIG.rows }, () => sym),
+  );
+}
+
 const STORAGE_KEY = 'pathways-of-the-sealed-v1';
 
 export interface PersistedSettings {
   balance: number;
   bet: number;
   muted: boolean;
-  seed: number;
 }
 
-function defaultState(seed = 0x5eedcafe): GameState {
+function randomSeed(): number {
+  if (typeof crypto !== 'undefined' && 'getRandomValues' in crypto) {
+    const buf = new Uint32Array(1);
+    crypto.getRandomValues(buf);
+    return buf[0]!;
+  }
+  return (Math.random() * 0xffffffff) >>> 0;
+}
+
+function defaultState(seed?: number): GameState {
+  const s = seed ?? randomSeed();
   return {
     phase: 'IDLE',
     balance: GAME_CONFIG.startingBalance,
     bet: GAME_CONFIG.defaultBet,
-    seed,
+    seed: s,
     spinCount: 0,
-    grid: emptyGrid(),
+    // Idle board = real strip sample (not the fixed strip-head mock pattern)
+    grid: spinReels(new SeededRng(s ^ 0x9e3779b9)),
     lastLineWins: [],
     lastScatterWin: null,
     lastPayout: 0,
@@ -51,9 +72,11 @@ function defaultState(seed = 0x5eedcafe): GameState {
     concealedPositions: null,
     graftedReel: null,
     graftedSymbol: null,
+    lastPreFeatureGrid: null,
     muted: false,
     reducedMotion: false,
     forceGrid: null,
+    forceSpiritualityEffect: null,
   };
 }
 
@@ -93,13 +116,12 @@ export class SlotGame {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (!raw) return;
       const data = JSON.parse(raw) as PersistedSettings;
-      // Balance is server-authoritative when using the API — local hydrate
-      // only applies to legacy offline/demo mute & bet preferences when persist is on.
+      // Only restore bet/mute. Seed must stay fresh each load — restoring seed
+      // without spinCount made every reload replay the same first spin.
       if (typeof data.bet === 'number' && (GAME_CONFIG.betOptions as readonly number[]).includes(data.bet)) {
         this.state.bet = data.bet;
       }
       if (typeof data.muted === 'boolean') this.state.muted = data.muted;
-      if (typeof data.seed === 'number') this.state.seed = data.seed >>> 0;
     } catch {
       /* ignore */
     }
@@ -111,7 +133,6 @@ export class SlotGame {
         balance: this.state.balance,
         bet: this.state.bet,
         muted: this.state.muted,
-        seed: this.state.seed,
       };
       localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
     } catch {
@@ -120,10 +141,9 @@ export class SlotGame {
   }
 
   /** Replace state from a public API snapshot (client mirror). */
-  applyPublicState(state: Omit<GameState, 'forceGrid'> & { forceGrid?: null }): void {
+  applyPublicState(state: GameState): void {
     this.state = {
       ...structuredClone(state),
-      forceGrid: null,
       reducedMotion: this.state.reducedMotion,
     };
     this.emit();
@@ -154,10 +174,11 @@ export class SlotGame {
   }
 
   resetDemo(): void {
-    const seed = this.state.seed;
     const muted = this.state.muted;
-    this.state = defaultState(seed);
+    const bet = this.state.bet;
+    this.state = defaultState();
     this.state.muted = muted;
+    this.state.bet = bet;
     this.lastResult = null;
     this.emit();
   }
@@ -205,10 +226,12 @@ export class SlotGame {
       stickyWildCells: [],
       tarotWildEnhance: false,
       forceGrid: this.state.forceGrid,
+      forceSpiritualityEffect: this.state.forceSpiritualityEffect,
       allowSpirituality: true,
       chargeInBonus: false,
     });
     this.state.forceGrid = null;
+    this.state.forceSpiritualityEffect = null;
 
     this.applyResult(result);
 
@@ -240,41 +263,28 @@ export class SlotGame {
     this.state.phase = 'BONUS_ACTIVE';
   }
 
-  /** Tarot Club interactive pick. */
+  /**
+   * Tarot Club gathering step (API compat) — same real resolveSpin path as bonusSpin.
+   */
   tarotPick(): { reward: TarotPickReward; credits: number } | null {
     if (this.state.phase !== 'BONUS_ACTIVE' || this.state.bonus?.mode !== 'TAROT_CLUB') {
       return null;
     }
-    const bonus = this.state.bonus;
-    if (bonus.tarotPicksRemaining <= 0) return null;
-
-    this.state.spinCount += 1;
-    const rng = new SeededRng(deriveSeed(this.state.seed, this.state.spinCount));
-    const { reward, bonus: next, creditsAwarded } = resolveTarotPick(
-      rng,
-      bonus,
-      this.state.bet,
-    );
-    this.state.bonus = next;
-    this.state.balance += creditsAwarded;
-    this.state.lastPayout = creditsAwarded;
-    this.state.lastAttribution = {
-      ...emptyAttribution(),
-      BONUS: creditsAwarded,
-    };
-
-    if (next.tarotPicksRemaining <= 0) {
-      this.completeBonus();
-    }
-    this.emit();
-    return { reward, credits: creditsAwarded };
+    const result = this.bonusSpin();
+    if (!result || !this.state.bonus) return null;
+    const last = this.state.bonus.tarotHistory[this.state.bonus.tarotHistory.length - 1];
+    if (!last) return null;
+    return { reward: last, credits: result.payout };
   }
 
-  /** Crimson Moon / Fool's Miracles bonus spin. */
+  /**
+   * Bonus free / gathering spin for ALL modes.
+   * Always uses resolveSpin (same engine as base game + server) — never a decorative mock grid.
+   * Tarot Club additionally draws one gathering-table reward after the reel result.
+   */
   bonusSpin(): SpinResult | null {
     if (this.state.phase !== 'BONUS_ACTIVE' || !this.state.bonus) return null;
     const mode = this.state.bonus.mode;
-    if (mode === 'TAROT_CLUB') return null;
     if (this.state.bonus.spinsRemaining <= 0) return null;
 
     this.state.phase = 'SPINNING';
@@ -284,9 +294,9 @@ export class SlotGame {
     bonus.spinsRemaining -= 1;
     bonus.spinsPlayed += 1;
 
-    // Crimson Moon: add sticky wild reel each spin
     this.state.spinCount += 1;
     const rng = new SeededRng(deriveSeed(this.state.seed, this.state.spinCount));
+
     if (mode === 'CRIMSON_MOON' && GAME_CONFIG.bonuses.crimsonMoon.stickyWildPerSpin) {
       if (GAME_CONFIG.bonuses.crimsonMoon.stickyMode === 'cell') {
         bonus = addStickyWildCell(bonus, rng);
@@ -300,7 +310,9 @@ export class SlotGame {
         ? bonus.moonMultiplier
         : mode === 'FOOLS_MIRACLES'
           ? bonus.miracleMultiplier
-          : 1;
+          : mode === 'TAROT_CLUB'
+            ? Math.max(1, bonus.tarotRunningMultiplier)
+            : 1;
 
     const result = resolveSpin({
       rng,
@@ -313,11 +325,10 @@ export class SlotGame {
       bonusMultiplier: bonusMult,
       forceExpandWilds:
         mode === 'FOOLS_MIRACLES' && GAME_CONFIG.bonuses.foolsMiracles.forceExpandWilds,
-      // Crimson sticky cells must not trigger full-reel Fool's Mirror expansion.
       allowWildExpansion: mode !== 'CRIMSON_MOON',
       stickyWildReels: bonus.stickyWildReels,
       stickyWildCells: bonus.stickyWildCells,
-      tarotWildEnhance: false,
+      tarotWildEnhance: mode === 'TAROT_CLUB' && bonus.tarotWildEnhance,
       forceGrid: null,
       allowSpirituality: true,
       chargeInBonus: GAME_CONFIG.spirituality.chargeInBonus,
@@ -326,13 +337,36 @@ export class SlotGame {
     this.applyResult(result);
     bonus.totalWon += result.payout;
 
-    // Retriggers
-    bonus = tryRetrigger(bonus, result.scatterCount);
-
-    // Progress multipliers
-    const hadPay = result.payout > 0;
-    if (mode === 'CRIMSON_MOON') bonus = advanceMoonMultiplier(bonus, hadPay);
-    if (mode === 'FOOLS_MIRACLES') bonus = advanceMiracleMultiplier(bonus, hadPay);
+    // Tarot gathering card — real modifiers / credit prize on top of reel math
+    if (mode === 'TAROT_CLUB') {
+      const { bonus: next, creditsAwarded } = resolveTarotPick(
+        rng,
+        bonus,
+        this.state.bet,
+      );
+      bonus = next;
+      if (creditsAwarded > 0) {
+        this.state.balance += creditsAwarded;
+        this.state.lastPayout += creditsAwarded;
+        this.state.lastAttribution = {
+          ...this.state.lastAttribution,
+          BONUS: this.state.lastAttribution.BONUS + creditsAwarded,
+        };
+        bonus.totalWon += creditsAwarded;
+        result.payout += creditsAwarded;
+        result.attribution.BONUS += creditsAwarded;
+        result.accounting.totalPayout += creditsAwarded;
+        result.accounting.attribution.BONUS += creditsAwarded;
+      }
+      if (bonus.tarotPicksRemaining > bonus.spinsRemaining) {
+        bonus.spinsRemaining = bonus.tarotPicksRemaining;
+      }
+    } else {
+      bonus = tryRetrigger(bonus, result.scatterCount);
+      const hadPay = result.payout > 0;
+      if (mode === 'CRIMSON_MOON') bonus = advanceMoonMultiplier(bonus, hadPay);
+      if (mode === 'FOOLS_MIRACLES') bonus = advanceMiracleMultiplier(bonus, hadPay);
+    }
 
     this.state.bonus = bonus;
     this.lastResult = result;
@@ -370,6 +404,7 @@ export class SlotGame {
     graftedSymbol?: GameState['graftedSymbol'];
   }): void {
     this.state.grid = result.grid;
+    this.state.lastPreFeatureGrid = result.preFeatureGrid;
     this.state.lastLineWins = result.lineWins;
     this.state.lastScatterWin = result.scatterWin;
     this.state.lastPayout = result.payout;
@@ -390,6 +425,57 @@ export class SlotGame {
   /** Test helper: force next grid. */
   debugForceGrid(grid: Grid): void {
     this.state.forceGrid = grid;
+    this.emit();
+  }
+
+  /** Fill Spirituality meter to threshold (UI + next spin). */
+  debugFillSpirituality(): void {
+    this.state.spiritualityCharge = GAME_CONFIG.spirituality.threshold;
+    this.emit();
+  }
+
+  /** Force next Spirituality effect (also fills meter so it fires on next spin). */
+  debugForceSpiritualityEffect(effect: SpiritualityEffectId): void {
+    // Clear forced grids — Spirituality must run on a real random reel result.
+    this.state.forceGrid = null;
+    this.state.forceSpiritualityEffect = effect;
+    this.state.spiritualityCharge = GAME_CONFIG.spirituality.threshold;
+    this.emit();
+  }
+
+  /** Place N scatters on next spin (3–4 = choice, 5+ = Fool's Miracles). */
+  debugForceScatters(count: number): void {
+    const n = Math.max(0, Math.min(5, Math.floor(count)));
+    const grid = fillGrid('JACK');
+    for (let i = 0; i < n; i++) {
+      grid[i]![0] = 'SCATTER';
+    }
+    this.state.forceGrid = grid;
+    this.emit();
+  }
+
+  /** Next spin: one wild per reel 0–2 (triggers Fool's Mirror expand). */
+  debugForceWildExpand(): void {
+    const grid = fillGrid('JACK');
+    for (let r = 0; r < 3; r++) {
+      grid[r]![1] = 'WILD';
+    }
+    this.state.forceGrid = grid;
+    this.emit();
+  }
+
+  /** Jump Sequence wins to a tier threshold. */
+  debugSetSequenceWins(wins: number): void {
+    this.state.sequenceWins = Math.max(0, Math.floor(wins));
+    this.state.sequenceMultiplier = sequenceMultiplierForWins(this.state.sequenceWins);
+    this.emit();
+  }
+
+  /** Clear pending cheat forces. */
+  debugClearForces(): void {
+    this.state.forceGrid = null;
+    this.state.forceSpiritualityEffect = null;
+    this.emit();
   }
 
   getSequenceProgress() {

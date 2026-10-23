@@ -4,6 +4,8 @@ import type {
   SpiritualityEffectId,
 } from '../config/gameConfig';
 
+export type { SpiritualityEffectId };
+
 export type Grid = SymbolId[][]; // [reel][row]
 
 export interface LineWin {
@@ -113,14 +115,20 @@ export interface GameState {
   concealedPositions: { reel: number; row: number }[] | null;
   graftedReel: number | null;
   graftedSymbol: SymbolId | null;
+  /** Grid after reel stop, before Spirituality mods (for drop → feature morph). */
+  lastPreFeatureGrid: Grid | null;
   muted: boolean;
   reducedMotion: boolean;
   /** Dev: forced outcome helpers. */
   forceGrid: Grid | null;
+  /** Dev: force next Spirituality effect when meter activates (or when forced). */
+  forceSpiritualityEffect: SpiritualityEffectId | null;
 }
 
 export interface SpinResult {
   grid: Grid;
+  /** Natural reel result before Spirituality (null if no feature ran). */
+  preFeatureGrid: Grid | null;
   lineWins: LineWin[];
   scatterWin: ScatterWin | null;
   scatterCount: number;

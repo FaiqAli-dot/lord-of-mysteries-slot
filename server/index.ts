@@ -6,9 +6,14 @@
  */
 import http from 'node:http';
 import { randomBytes } from 'node:crypto';
-import { GAME_CONFIG, type BonusModeId } from '../src/config/gameConfig.ts';
+import {
+  GAME_CONFIG,
+  type BonusModeId,
+  type SpiritualityEffectId,
+} from '../src/config/gameConfig.ts';
 import { SlotGame } from '../src/engine/game.ts';
 import { toPublicState } from '../src/api/publicState.ts';
+import type { Grid } from '../src/engine/types.ts';
 
 const PORT = Number(process.env.PORT ?? 8787);
 const VERSION = '1.0.0';
@@ -51,7 +56,9 @@ function getSession(id: string): Session | null {
 
 function createSession(): Session {
   const id = newSessionId();
-  const game = new SlotGame({ persist: false });
+  // Fresh crypto seed per session — never reuse the old fixed default.
+  const seed = randomBytes(4).readUInt32BE(0);
+  const game = new SlotGame({ persist: false, seed });
   const session: Session = {
     id,
     game,
@@ -243,6 +250,40 @@ const server = http.createServer(async (req, res) => {
       if (req.method === 'POST' && action === 'mute') {
         const body = await parseJson(req);
         g.setMuted(Boolean(body.muted));
+        json(res, 200, sessionPayload(session), origin);
+        return;
+      }
+
+      // Demo cheats — same surface as LocalSession debug* methods
+      if (req.method === 'POST' && action === 'debug') {
+        const body = await parseJson(req);
+        const op = String(body.op ?? '');
+        switch (op) {
+          case 'forceGrid':
+            g.debugForceGrid(body.grid as Grid);
+            break;
+          case 'fillSpirituality':
+            g.debugFillSpirituality();
+            break;
+          case 'forceSpiritualityEffect':
+            g.debugForceSpiritualityEffect(body.effect as SpiritualityEffectId);
+            break;
+          case 'forceScatters':
+            g.debugForceScatters(Number(body.count));
+            break;
+          case 'forceWildExpand':
+            g.debugForceWildExpand();
+            break;
+          case 'setSequenceWins':
+            g.debugSetSequenceWins(Number(body.wins));
+            break;
+          case 'clearForces':
+            g.debugClearForces();
+            break;
+          default:
+            json(res, 400, { error: `Unknown debug op: ${op}` }, origin);
+            return;
+        }
         json(res, 200, sessionPayload(session), origin);
         return;
       }

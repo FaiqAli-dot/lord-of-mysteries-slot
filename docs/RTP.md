@@ -3,8 +3,8 @@
 ## Target
 
 - **Total RTP:** 96.00%
-- **Tolerance:** ±0.50 percentage points (configurable `GAME_CONFIG.rtpTolerance`)
-- **Category contribution targets (not separate pools):**
+- **Tolerance:** ±1.00 percentage points (`GAME_CONFIG.rtpTolerance`)
+- **Category contribution targets (tuning goals, not separate pools):**
   - Base-game wins: 50.00%
   - All bonus modes: 30.00%
   - Sequence progression: 10.00%
@@ -17,78 +17,101 @@ Every credited unit belongs to **exactly one** category:
 | Category | What it receives |
 |---|---|
 | **BASE** | Line + scatter credits from base-game spins after Fool's Mirror wild multipliers, **before** Sequence uplift and Spirituality incremental uplift. |
-| **BONUS** | All credits awarded inside Tarot Club / Crimson Moon / Fool's Miracles, including the 1× portion of bonus-spin line wins and Tarot pick credits. Bonus-mode multipliers (moon / miracle) **increments** are BONUS. |
+| **BONUS** | All credits awarded inside Tarot Club / Crimson Moon / Fool's Miracles, including the 1× portion of bonus-spin line wins and Tarot pick credits. Bonus-mode multipliers (moon / miracle / tarot) **increments** are BONUS. |
 | **SEQUENCE** | Only the **incremental** credits from Sequence multiplier above 1× (`floor(credits × mult) − credits`). Applies in base and bonus. |
-| **SPIRITUALITY** | Only the **incremental** credits caused by Spirituality grid modifications (Grafting, Glove, Locked Wild, Creeping Hunger respin delta). Blind Stupidity is visual-only → 0 incremental. Sequence uplift on the spirituality increment is attributed to SEQUENCE. |
-
-**Gross feature influence** (non-exclusive) can be measured separately as: total credits on spins where Sequence mult > 1, or where Spirituality activated — these overlap with BASE/BONUS and must not be summed into RTP.
+| **SPIRITUALITY** | Only the **incremental** credits caused by Spirituality grid modifications (Grafting, Glove, Locked Wild, Blind Stupidity upgrades, Creeping Hunger respin delta). Sequence uplift on the spirituality increment is attributed to SEQUENCE. |
 
 ## Simulation
 
 ```bash
 npm run simulate                 # default 200k spins
 npm run simulate:quick           # 100k spins
-npx tsx scripts/simulate.ts --spins 1000000 --seed 1577009918 --theory
+npm run simulate:smoke           # 20k spins, seed 7 (CI)
+npx tsx scripts/simulate.ts --spins 500000 --seed 7
+npx tsx scripts/simulate.ts --spins 1000000 --seed 7 --theory
 ```
 
 The simulator:
 
 - Uses the **same** `resolveSpin` pipeline and `gameConfig`
-- Plays full bonus lifecycles (auto-picks Tarot; auto-chooses Tarot/Crimson on alternate choice triggers)
-- Includes retriggers (capped), Sequence, Spirituality, Locked Wilds
+- Plays full bonus lifecycles matching `SlotGame.bonusSpin` (Tarot = reel spins **+** gathering picks; Crimson / Miracles = free spins + retriggers)
+- Includes Sequence reset after every completed bonus
 - Reports RTP, 95% CI, hit frequency, bonus frequencies, volatility, max win, percentiles, category RTP
+
+### Known historical simulator bug (fixed)
+
+Prior to this redesign pass, the Tarot Club path in `simulator.ts` awarded **pick credits only** and **returned before Sequence reset**. That understated Tarot reel EV and **inflated Sequence** (meter climbed across Tarot triggers). Live `SlotGame.bonusSpin` always reset Sequence; docs that cited ~96% @ 1e6 under the old sim are **not comparable** to post-fix runs.
 
 ## Theoretical / analytic notes
 
-Full exact enumeration of 5 reel strips (~60^5 ≈ 7.8×10^8) with stateful Sequence/Spirituality/bonuses is not practical. We provide:
+Full exact enumeration of 5 reel strips with stateful Sequence/Spirituality/bonuses is not practical. We provide:
 
 1. **Base-only Monte Carlo** (`--theory`): Sequence locked at 1×, Spirituality disabled, no bonuses — estimates pure line+scatter+wild RTP.
 2. **Full Monte Carlo**: complete game including stateful features.
 
-Claimed 96% is only valid when full Monte Carlo (sufficient N) falls within tolerance of 0.96. Category targets are tuning goals; if they conflict with gameplay rules, parameters (strip composition, pays, bonus weights) are adjusted — rules are not silently changed.
+Claimed 96% is only valid when full Monte Carlo (sufficient N) falls within tolerance of 0.96.
 
 ## Honesty policy
 
 Never omit losing spins, never exclude bonus wagers/payouts, never manipulate results. If measured RTP ≠ 96.00%, report the measured value and discrepancy.
 
-## Latest measured results (engine v1 / payScale 1.18)
+## Baseline (pre-redesign) — 100,000 spins, seed 7, bet 20
 
-### Monte Carlo — 1,000,000 base spins (seed 7, bet 20)
+Captured **before** Tarot sim fix / Spirituality retune / Sequence retune (Blind + Grafting already pay-affecting):
 
 | Metric | Value |
 |---|---|
-| RTP | **95.9791%** |
-| 95% CI | [95.0613%, 96.8969%] |
-| Δ vs 96.00% | **−0.0209 pp** (within ±1.0 pp tolerance) |
-| Hit frequency | 61.563% |
-| Losing-spin frequency | 38.437% |
-| Volatility (σ of win/bet) | 4.68 |
-| Max win | 285.6× bet |
-| p50 / p90 / p95 / p99 / p99.9 (×bet) | 0.1 / 1.65 / 3.2 / 16.9 / 66 |
+| RTP | **108.4239%** |
+| 95% CI | [105.41%, 111.44%] |
+| Hit frequency | 62.868% |
+| Volatility σ | 4.86 |
+| Max win | 186.0× bet |
+| BASE / BONUS / SEQUENCE / SPIRITUALITY | 47.63% / 30.18% / 13.51% / **17.11%** |
 
-**RTP attribution (mutually exclusive):**
+Spirituality far above the 6% allocation after Blind Stupidity became a real upgrade and Grafting became seed+neighbor Wilds.
+
+## Final (post-redesign) — 500,000 spins, seed 7, bet 20
+
+Config highlights: `payScale` **1.155**, Spirituality threshold **18**, Blind `transformCount` **1**, Grafting spreads only from natural Wilds, Sequence tiers **115 / 230 / 360 / 520 / 720 / 1000**, Tarot sim aligned with live.
+
+| Metric | Value |
+|---|---|
+| RTP | **95.1862%** |
+| 95% CI | [93.8023%, 96.5702%] |
+| Δ vs 96.00% | **−0.8138 pp** (within ±1.0 pp tolerance) |
+| Hit frequency | 62.695% |
+| Losing-spin frequency | 37.305% |
+| Volatility (σ of win/bet) | 4.99 |
+| Max win (observed) | 687.3× bet (observation, not a hard cap) |
+| p50 / p90 / p95 / p99 / p99.9 (×bet) | 0.1 / 1.5 / 3 / 16.6 / 71.5 |
+
+**RTP attribution:**
 
 | Category | Measured | Target |
 |---|---|---|
-| BASE | 46.61% | 50.00% |
-| BONUS | 31.73% | 30.00% |
-| SEQUENCE | 12.33% | 10.00% |
-| SPIRITUALITY | 5.31% | 6.00% |
+| BASE | 45.95% | 50.00% |
+| BONUS | 33.30% | 30.00% |
+| SEQUENCE | 10.45% | 10.00% |
+| SPIRITUALITY | 5.49% | 6.00% |
 
 **Bonus trigger frequencies (per base spin):**
 
 | Mode | Frequency | Avg payout (credits @ bet 20) |
 |---|---|---|
-| Tarot Club | 0.511% | 868 |
-| Crimson Moon | 0.509% | 417 |
-| Fool's Miracles | 0.0046% | 421 |
+| Tarot Club | 0.5086% | 968 |
+| Crimson Moon | 0.4936% | 410 |
+| Fool's Miracles | 0.0040% | 306 |
 
-### Theoretical base-only approx (`--theory`, 2M samples)
+**Spirituality activations:** 24,955 / 500,000 base spins (~5.0%). Effect mix skewed toward Glove / Locked Wild / Hunger after weight retune.
 
-Sequence locked at 1×, Spirituality disabled, no bonuses:
+### Cross-check — 200,000 spins, seed 7
 
-- Line RTP ≈ 43.77%
-- Scatter RTP ≈ 2.28%
-- Combined base-only ≈ **46.04%**
+RTP **95.5295%** (Δ −0.47 pp) under an intermediate `payScale` 1.14 run during tuning; final documented figure is the **500k / payScale 1.155** row above.
 
-Stateful Sequence / Spirituality / bonus EV make up the remainder toward ~96% in the full Monte Carlo.
+## Limitations
+
+- 500k spins is useful but not proof of convergence; 1e6+ recommended before commercial certification.
+- Tarot choice in sim alternates Tarot/Crimson; players may bias one mode.
+- Hunger can still **land new Scatters** on respun cells (existing Scatters/Sequence/Spirit preserved).
+- No hard max-win cap is enforced in engine.
+- CI smoke (`simulate:smoke`, 20k) can swing several points; use ≥200k for tuning decisions.

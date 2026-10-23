@@ -1,4 +1,8 @@
-import { GAME_CONFIG, type SymbolId } from '../config/gameConfig';
+import {
+  GAME_CONFIG,
+  type SymbolId,
+  type SpiritualityEffectId,
+} from '../config/gameConfig';
 import type {
   Attribution,
   Grid,
@@ -45,8 +49,10 @@ export interface PipelineInput {
   stickyWildCells: { reel: number; row: number }[];
   /** Tarot wild enhance: treat expanded wild multiplier as +1. */
   tarotWildEnhance: boolean;
-  /** Optional forced grid (tests). */
+  /** Optional forced grid (tests / cheats). */
   forceGrid?: Grid | null;
+  /** Dev: force a specific Spirituality effect on activation. */
+  forceSpiritualityEffect?: SpiritualityEffectId | null;
   /** Whether Spirituality may activate this spin. */
   allowSpirituality: boolean;
   /** Pre-existing charge earning context. */
@@ -75,7 +81,7 @@ export interface PipelineInput {
  * - Generate base grid + apply locked wilds / sticky wilds
  * - Tentatively evaluate to decide charge from wins + spirit symbols
  * - If threshold reached, activate effect (may modify grid), then re-evaluate fully
- * - Blind Stupidity does not change math
+ * - Blind Stupidity upgrades random cells to high symbols (counts as grid mod)
  * - Spirituality incremental attribution = max(0, finalAfterWild - baselineAfterWild)
  *   where baseline is evaluation without spirituality grid mods (same seed outcome base)
  */
@@ -100,6 +106,7 @@ export function resolveSpin(input: PipelineInput): SpinResult & {
     stickyWildCells,
     tarotWildEnhance,
     forceGrid,
+    forceSpiritualityEffect,
     allowSpirituality,
   } = input;
 
@@ -128,31 +135,12 @@ export function resolveSpin(input: PipelineInput): SpinResult & {
     activeLocked.map((lw) => ({ reel: lw.reel, row: lw.row })),
   );
 
-  // Baseline evaluation (before spirituality mods) for incremental attribution
-  const baselineEval = evaluateGridPayouts(
-    grid,
-    totalBet,
-    forceExpandWilds,
-    tarotWildEnhance,
-    allowWildExpansion,
-  );
-  const spiritSymbols = countSymbol(grid, 'SPIRIT');
-
-  // Charge: +chargePerWin once per winning spin (not per line), plus spirit symbols.
-  // Avoids multi-line spins dumping the entire meter in one hit.
-  const winCombos =
-    baselineEval.lineWins.length + (baselineEval.scatterWin ? 1 : 0);
+  /**
+   * Spirituality timing (UI contract):
+   * - Filling the meter does NOT fire on the same spin — Idle shows READY.
+   * - The *next* spin activates using the pre-spin charge (or a cheat force).
+   */
   let charge = spiritualityCharge;
-  const mayCharge = !inBonus || GAME_CONFIG.spirituality.chargeInBonus;
-  if (mayCharge) {
-    const winCharge =
-      winCombos > 0 ? GAME_CONFIG.spirituality.chargePerWin : 0;
-    charge = addCharge(
-      charge,
-      winCharge + spiritSymbols * GAME_CONFIG.spirituality.chargePerSpiritSymbol,
-    );
-  }
-
   let spiritualityActivation: SpiritualityActivation | null = null;
   let concealed: { reel: number; row: number }[] | null = null;
   let graftedReel: number | null = null;
@@ -160,13 +148,25 @@ export function resolveSpin(input: PipelineInput): SpinResult & {
   let workingLocked = activeLocked;
   let spiritualityGridModified = false;
 
-  // 2–3. Spirituality pre-evaluation transformations
-  if (
+  /** Natural reel result (after sticky/locked) — shown on drop before feature morph. */
+  const preFeatureGrid = cloneGrid(grid);
+  const forceSpirit =
+    allowSpirituality && forceSpiritualityEffect != null;
+  const preArmed =
     allowSpirituality &&
-    shouldActivate(charge) &&
-    GAME_CONFIG.spirituality.maxActivationsPerSpin >= 1
-  ) {
-    const act = activateSpirituality(rng, grid, workingLocked);
+    GAME_CONFIG.spirituality.maxActivationsPerSpin >= 1 &&
+    (forceSpirit || shouldActivate(spiritualityCharge));
+
+  if (preArmed) {
+    if (forceSpirit && !shouldActivate(charge)) {
+      charge = GAME_CONFIG.spirituality.threshold;
+    }
+    const act = activateSpirituality(
+      rng,
+      grid,
+      workingLocked,
+      forceSpiritualityEffect,
+    );
     charge = act.charge;
     spiritualityActivation = act.activation;
     grid = act.grid;
@@ -174,8 +174,30 @@ export function resolveSpin(input: PipelineInput): SpinResult & {
     concealed = act.concealed;
     graftedReel = act.graftedReel;
     graftedSymbol = act.graftedSymbol;
-    spiritualityGridModified =
-      act.activation.effect !== 'BLIND_STUPIDITY';
+    spiritualityGridModified = true;
+  }
+
+  // Baseline = pre-spirituality grid; final = after activation mods
+  const baselineEval = evaluateGridPayouts(
+    preFeatureGrid,
+    totalBet,
+    forceExpandWilds,
+    tarotWildEnhance,
+    allowWildExpansion,
+  );
+  const spiritSymbols = countSymbol(preFeatureGrid, 'SPIRIT');
+
+  // Charge from this spin — may fill the meter for the *next* spin (no same-spin fire).
+  const winCombos =
+    baselineEval.lineWins.length + (baselineEval.scatterWin ? 1 : 0);
+  const mayCharge = !inBonus || GAME_CONFIG.spirituality.chargeInBonus;
+  if (mayCharge && !spiritualityActivation) {
+    const winCharge =
+      winCombos > 0 ? GAME_CONFIG.spirituality.chargePerWin : 0;
+    charge = addCharge(
+      charge,
+      winCharge + spiritSymbols * GAME_CONFIG.spirituality.chargePerSpiritSymbol,
+    );
   }
 
   // 4. Expansions (after spirituality mods)
@@ -247,13 +269,12 @@ export function resolveSpin(input: PipelineInput): SpinResult & {
     payout = boosted;
   }
 
-  // Advance Sequence AFTER applying current multiplier (one advance per winning combo this spin)
+  // Advance Sequence AFTER applying current multiplier.
+  // Flag name is historical: advances once per winning *spin* (≥1 combo), not per line.
   let seqWinsAfter = sequenceWins;
   let seqMultAfter = sequenceMultiplier;
   const finalWinCombos = lineWins.length + (scatterWin ? 1 : 0);
   if (GAME_CONFIG.sequence.advanceOnWinningCombination && finalWinCombos > 0) {
-    // Advance once per spin that has ≥1 winning combination (not per line),
-    // to avoid unintentional multi-advance from many lines.
     const adv = advanceSequence(sequenceWins, 1);
     seqWinsAfter = adv.wins;
     seqMultAfter = adv.multiplier;
@@ -267,12 +288,9 @@ export function resolveSpin(input: PipelineInput): SpinResult & {
     totalPayout: payout,
     attribution: { ...attr },
     hit: payout > 0,
+    // CHOICE stays null until the player (or sim) selects a mode.
     bonusTriggered:
-      !inBonus && bonusTrigger === 'FOOLS_MIRACLES'
-        ? 'FOOLS_MIRACLES'
-        : !inBonus && bonusTrigger === 'CHOICE'
-          ? eligibleBonuses[0] ?? null
-          : null,
+      !inBonus && bonusTrigger === 'FOOLS_MIRACLES' ? 'FOOLS_MIRACLES' : null,
     sequenceMultiplierApplied: sequenceMultiplier,
     spiritualityActivated: spiritualityActivation !== null,
     spiritualityEffect: spiritualityActivation?.effect ?? null,
@@ -280,6 +298,7 @@ export function resolveSpin(input: PipelineInput): SpinResult & {
 
   return {
     grid: evalGrid,
+    preFeatureGrid: spiritualityActivation ? preFeatureGrid : null,
     lineWins,
     scatterWin,
     scatterCount,

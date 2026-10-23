@@ -2,8 +2,11 @@
  * Fully client-side session — same engine as the server/simulator.
  * Used when no API URL is configured so GitHub Pages works standalone.
  */
-import type { BonusModeId } from '../config/gameConfig';
-import type { GameState } from '../engine/types';
+import type {
+  BonusModeId,
+  SpiritualityEffectId,
+} from '../config/gameConfig';
+import type { GameState, Grid } from '../engine/types';
 import { SlotGame } from '../engine/game';
 
 export class LocalSession {
@@ -89,5 +92,33 @@ export class LocalSession {
 
   setReducedMotion(v: boolean): void {
     this.game.setReducedMotion(v);
+  }
+
+  debugForceGrid(grid: Grid): void {
+    this.game.debugForceGrid(grid);
+  }
+
+  debugFillSpirituality(): void {
+    this.game.debugFillSpirituality();
+  }
+
+  debugForceSpiritualityEffect(effect: SpiritualityEffectId): void {
+    this.game.debugForceSpiritualityEffect(effect);
+  }
+
+  debugForceScatters(count: number): void {
+    this.game.debugForceScatters(count);
+  }
+
+  debugForceWildExpand(): void {
+    this.game.debugForceWildExpand();
+  }
+
+  debugSetSequenceWins(wins: number): void {
+    this.game.debugSetSequenceWins(wins);
+  }
+
+  debugClearForces(): void {
+    this.game.debugClearForces();
   }
 }

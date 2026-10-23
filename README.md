@@ -16,7 +16,8 @@ A gothic occult **5×4 video slot** (20 fixed paylines) — **demo credits only,
 
 ```bash
 npm install
-npm run dev          # client-side play at http://localhost:5173
+npm run dev          # client-side play at http://localhost:5173 (real RNG in-browser)
+npm run local        # API :8787 + Vite pointed at it (authoritative spins)
 npm test
 npm run simulate:quick
 npm run build        # production static build
@@ -25,6 +26,8 @@ npm run build        # production static build
 ### Optional authoritative API
 
 ```bash
+npm run local        # recommended — server + client together
+# or separately:
 npm run server       # http://0.0.0.0:8787
 # Point the UI at it:
 #   http://localhost:5173/?api=http://127.0.0.1:8787
@@ -107,9 +110,11 @@ When `?api=` points at a **localtunnel** / `*.loca.lt` URL, the client automatic
 
 Fool’s Mirror wilds · Pathway Gate scatters (3–4 choice / 5+ Fool’s Miracles) · Sequence (≤15×) · Spirituality effects · Tarot Club / Crimson Moon / Fool’s Miracles · paytable/help/settings.
 
+**Docs:** [`FEATURE_RULES.md`](docs/FEATURE_RULES.md) · [`LORE_AND_IP.md`](docs/LORE_AND_IP.md) · [`RTP.md`](docs/RTP.md) · [`QA_REPORT.md`](docs/QA_REPORT.md) · [`FEATURE_RESEARCH_BRIEF.md`](docs/FEATURE_RESEARCH_BRIEF.md).
+
 ## Math & RTP
 
-Target **96.00%**. See [`docs/RTP.md`](docs/RTP.md). Measured **95.979%** @ 1e6 spins (seed 7).
+Target **96.00%**. See [`docs/RTP.md`](docs/RTP.md). Measured **95.19%** @ 500k spins (seed 7) after Tarot-sim fidelity + Sequence/Spirituality retune.
 
 ## Artwork
 

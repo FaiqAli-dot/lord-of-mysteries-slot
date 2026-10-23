@@ -141,3 +141,111 @@ body {
   max-height: 160px;
   overflow: auto;
 }
+
+.status-chip.tarot-chip {
+  bottom: 24%;
+  max-width: min(520px, 90vw);
+  text-align: center;
+  color: #e0c878;
+  border: 1px solid rgba(196, 163, 90, 0.45);
+}
+
+/* —— Feature cheats (local demo) —— */
+.cheats-host {
+  position: fixed;
+  top: 2.25rem;
+  right: 0.5rem;
+  z-index: 5;
+  pointer-events: none;
+}
+
+.cheats-toggle {
+  pointer-events: auto;
+  font-family: var(--font-display);
+  font-size: 0.65rem;
+  letter-spacing: 0.12em;
+  color: #e0c878;
+  background: rgba(40, 18, 24, 0.92);
+  border: 1px solid var(--gold);
+  border-radius: 6px;
+  padding: 0.4rem 0.65rem;
+  cursor: pointer;
+}
+
+.cheats-panel {
+  pointer-events: auto;
+  margin-top: 0.4rem;
+  width: min(260px, 88vw);
+  max-height: min(70vh, 520px);
+  overflow: auto;
+  background: rgba(18, 14, 12, 0.96);
+  border: 1px solid var(--frame);
+  border-radius: 10px;
+  padding: 0.65rem 0.75rem 0.85rem;
+  font-size: 0.8rem;
+}
+
+.cheats-panel[hidden] {
+  display: none;
+}
+
+.cheats-panel header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.5rem;
+  margin-bottom: 0.35rem;
+  font-family: var(--font-display);
+  color: var(--gold);
+}
+
+.cheats-hint {
+  font-size: 0.65rem;
+  opacity: 0.65;
+  font-family: var(--font-body);
+}
+
+.cheats-pending {
+  margin: 0 0 0.5rem;
+  font-size: 0.72rem;
+  opacity: 0.85;
+  color: #9ad4d4;
+}
+
+.cheats-panel section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  margin-bottom: 0.55rem;
+}
+
+.cheats-panel h4 {
+  margin: 0.15rem 0 0.1rem;
+  font-family: var(--font-display);
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--cream);
+  opacity: 0.75;
+}
+
+.cheats-panel button {
+  font-family: var(--font-body);
+  font-size: 0.78rem;
+  text-align: left;
+  color: var(--cream);
+  background: #2a221c;
+  border: 1px solid rgba(138, 115, 74, 0.45);
+  border-radius: 6px;
+  padding: 0.35rem 0.5rem;
+  cursor: pointer;
+}
+
+.cheats-panel button:hover {
+  border-color: var(--gold);
+  color: #e0c878;
+}
+
+.cheats-clear {
+  opacity: 0.8;
+}

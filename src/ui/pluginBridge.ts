@@ -158,22 +158,79 @@ export function setSoundToggles(musicOn: boolean, soundOn: boolean): void {
 }
 
 export function showPaytableInPlugin(): void {
-  const ids = (Object.keys(SYMBOLS) as SymbolId[]).filter(
+  const css = `.pathways-paytable{color:#eee;font-family:Montserrat,sans-serif;padding:calc(var(--game-ui-percent) * 2);max-width:42rem}
+      .pathways-paytable table{width:100%;border-collapse:collapse;margin:0.75rem 0}
+      .pathways-paytable td,.pathways-paytable th{border-bottom:1px solid #555;padding:0.35rem;text-align:left;vertical-align:top}
+      .pathways-paytable h2,.pathways-paytable h3{margin:0.6rem 0 0.35rem;font-weight:600}
+      .pathways-paytable p,.pathways-paytable li{line-height:1.45;opacity:0.92}
+      .pathways-paytable ul{padding-left:1.1rem;margin:0.4rem 0}`;
+
+  const payIds = (Object.keys(SYMBOLS) as SymbolId[]).filter(
     (id) => SYMBOLS[id].tier === 'high' || SYMBOLS[id].tier === 'low',
   );
-  const rows = ids
+  const payRows = payIds
     .map((id) => {
       const d = SYMBOLS[id];
-      return `<tr><td>${d.name}</td><td coeficient="${d.pays[0]}">3×${d.pays[0]}</td><td coeficient="${d.pays[1]}">4×${d.pays[1]}</td><td coeficient="${d.pays[2]}">5×${d.pays[2]}</td></tr>`;
+      return `<tr><td>${d.name}</td><td>3×${d.pays[0]}</td><td>4×${d.pays[1]}</td><td>5×${d.pays[2]}</td></tr>`;
     })
     .join('');
+
+  const specialRows = (['WILD', 'SCATTER', 'SEQUENCE', 'SPIRIT'] as SymbolId[])
+    .map((id) => {
+      const d = SYMBOLS[id];
+      const role =
+        id === 'WILD'
+          ? 'Substitutes for paying symbols; may expand a reel (2× on lines that use it). Never substitutes for Pathway Gate, Sequence Sigil, or Spirit Ember.'
+          : id === 'SCATTER'
+            ? '3–4 open a bonus choice (Tarot Club or Crimson Moon). 5+ start Fool’s Miracles. Pays 2× / 8× / 40× total bet for 3 / 4 / 5.'
+            : id === 'SEQUENCE'
+              ? 'Breaks paylines. Does not advance the Sequence Resonance meter.'
+              : 'Charges Spirituality (+1 each on the grid). Breaks paylines.';
+      return `<tr><td>${d.name}</td><td>${role}</td></tr>`;
+    })
+    .join('');
+
+  const spiritEffects = GAME_CONFIG.spirituality.effects
+    .map((e) => `<li><strong>${e.name}</strong> — ${e.description}</li>`)
+    .join('');
+
+  const seqTiers = GAME_CONFIG.sequence.tiers
+    .map((t) => `${t.multiplier}× at ${t.winsRequired}+ paying spins`)
+    .join(' · ');
+
   externalUiCall('ui-help-popup', 'addPage', {
     html: `<div class="pathways-paytable"><h2>${GAME_CONFIG.title}</h2>
-      <p>5×4 · 20 paylines · demo credits</p>
-      <table><thead><tr><th>Symbol</th><th>3</th><th>4</th><th>5</th></tr></thead><tbody>${rows}</tbody></table></div>`,
-    css: `.pathways-paytable{color:#eee;font-family:Montserrat,sans-serif;padding:calc(var(--game-ui-percent) * 2)}
-      .pathways-paytable table{width:100%;border-collapse:collapse}
-      .pathways-paytable td,.pathways-paytable th{border-bottom:1px solid #555;padding:0.35rem;text-align:left}`,
+      <p>5×4 · 20 fixed paylines · left-to-right · ${GAME_CONFIG.demoLabel}</p>
+      <p>Pays below are line-bet multiples (total bet ÷ 20), before the global pay scale.</p>
+      <table><thead><tr><th>Symbol</th><th>3</th><th>4</th><th>5</th></tr></thead><tbody>${payRows}</tbody></table></div>`,
+    css,
+  });
+  externalUiCall('ui-help-popup', 'addPage', {
+    html: `<div class="pathways-paytable"><h2>Special symbols</h2>
+      <table><thead><tr><th>Symbol</th><th>What it does</th></tr></thead><tbody>${specialRows}</tbody></table></div>`,
+    css,
+  });
+  externalUiCall('ui-help-popup', 'addPage', {
+    html: `<div class="pathways-paytable"><h2>Meters</h2>
+      <h3>${GAME_CONFIG.sequence.displayName}</h3>
+      <p>${GAME_CONFIG.sequence.displayHint}</p>
+      <p>Tiers: ${seqTiers}. Cap ${GAME_CONFIG.sequence.maxMultiplier}×.</p>
+      <h3>${GAME_CONFIG.spirituality.displayName}</h3>
+      <p>${GAME_CONFIG.spirituality.displayHint}</p>
+      <p>Threshold: ${GAME_CONFIG.spirituality.threshold}. Effects (one per awakening):</p>
+      <ul>${spiritEffects}</ul></div>`,
+    css,
+  });
+  externalUiCall('ui-help-popup', 'addPage', {
+    html: `<div class="pathways-paytable"><h2>Bonus rounds</h2>
+      <h3>${GAME_CONFIG.bonuses.tarotClub.name}</h3>
+      <p>${GAME_CONFIG.bonuses.tarotClub.selections} gathering free spins. Each spin pays on the reels, then draws one random gathering reward (credits, session multiplier, wild enhance, or extra spin). Rewards are random — not player decisions.</p>
+      <h3>${GAME_CONFIG.bonuses.crimsonMoon.name}</h3>
+      <p>${GAME_CONFIG.bonuses.crimsonMoon.spins} free spins. Sticky Wild cells accumulate (cap ${GAME_CONFIG.bonuses.crimsonMoon.maxStickyWildCells}). Wild expansion is off. Moon multiplier starts at ${GAME_CONFIG.bonuses.crimsonMoon.moonMultStart}×, steps every ${GAME_CONFIG.bonuses.crimsonMoon.moonMultStepEvery} paying spins, caps at ${GAME_CONFIG.bonuses.crimsonMoon.moonMultCap}×. Retriggers capped.</p>
+      <h3>${GAME_CONFIG.bonuses.foolsMiracles.name}</h3>
+      <p>${GAME_CONFIG.bonuses.foolsMiracles.spins} free spins with forced Wild expansion. Miracle multiplier starts at ${GAME_CONFIG.bonuses.foolsMiracles.miracleMultStart}×, steps every ${GAME_CONFIG.bonuses.foolsMiracles.miracleMultStepEvery} paying spins, caps at ${GAME_CONFIG.bonuses.foolsMiracles.miracleMultCap}×. Triggered by 5+ Pathway Gates.</p>
+      <p>No extra wager in bonus. ${GAME_CONFIG.sequence.displayName} resets when a bonus ends.</p></div>`,
+    css,
   });
   externalUiCall('ui-help-popup', 'show');
   externalUiCall('overlay', 'show');
