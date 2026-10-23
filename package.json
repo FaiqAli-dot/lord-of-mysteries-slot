@@ -6,6 +6,7 @@
   "description": "A gothic occult 5x4 video slot — Pathways of the Sealed (demo credits only)",
   "scripts": {
     "dev": "VITE_BASE=/ vite",
+    "local": "node scripts/local-dev.mjs",
     "build": "tsc && vite build",
     "preview": "VITE_BASE=/ vite preview",
     "server": "tsx server/index.ts",
