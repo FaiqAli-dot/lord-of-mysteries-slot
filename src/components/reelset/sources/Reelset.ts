@@ -502,6 +502,7 @@ export class PixiStage {
     this.reelMask.beginFill(0xffffff);
     this.reelMask.drawRect(maskX, maskY, maskW, maskH);
     this.reelMask.endFill();
+    this.cellsRoot.mask = this.reelMask;
 
     this.cellW = FRAME_NATIVE.colW * frameScale;
     this.cellH = FRAME_NATIVE.rowH * frameScale;
