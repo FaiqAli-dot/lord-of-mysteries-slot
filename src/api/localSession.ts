@@ -118,6 +118,22 @@ export class LocalSession {
     this.game.debugSetSequenceWins(wins);
   }
 
+  debugSetSequenceMultiplier(mult: number): void {
+    this.game.debugSetSequenceMultiplier(mult);
+  }
+
+  debugForceCreepingHunger(): void {
+    this.game.debugForceCreepingHunger();
+  }
+
+  debugForceBonusMode(mode: BonusModeId): void {
+    this.game.debugForceBonusMode(mode);
+  }
+
+  debugSeedHistoricalVoid(): void {
+    this.game.debugSeedHistoricalVoid();
+  }
+
   debugClearForces(): void {
     this.game.debugClearForces();
   }

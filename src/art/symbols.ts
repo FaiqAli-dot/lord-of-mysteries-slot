@@ -147,18 +147,18 @@ const GENERATORS: Record<SymbolId, () => string> = {
   SCATTER: () =>
     svg(
       `<path d="M50 18 L58 40 L82 42 L64 58 L70 82 L50 68 L30 82 L36 58 L18 42 L42 40 Z"
-             fill="${C.burgundy}" stroke="${C.gold}" stroke-width="1.4"/>
+             fill="${C.crimson}" stroke="${C.gold}" stroke-width="1.4"/>
        <circle cx="50" cy="50" r="6" fill="${C.ink}" stroke="${C.goldSoft}" stroke-width="1"/>
-       ${label('PATHWAY')}`,
-      'Pathway Gate Scatter',
+       ${label('TAROT')}`,
+      'Crimson Tarot Card',
     ),
   SEQUENCE: () =>
     svg(
-      `<path d="M30 70 L50 25 L70 70 Z" fill="none" stroke="${C.gold}" stroke-width="1.5"/>
-       <path d="M38 58 L50 36 L62 58 Z" fill="${C.burgundyDeep}" stroke="${C.bronze}" stroke-width="0.8"/>
-       <circle cx="50" cy="48" r="4" fill="${C.goldSoft}"/>
-       ${label('SEQUENCE')}`,
-      'Sequence Sigil',
+      `<path d="M38 28 L38 70 Q38 82 50 82 Q62 82 62 70 L62 28 Z" fill="none" stroke="${C.gold}" stroke-width="1.5"/>
+       <ellipse cx="50" cy="28" rx="12" ry="5" fill="${C.burgundyDeep}" stroke="${C.bronze}" stroke-width="1"/>
+       <path d="M44 40 H56 M44 52 H56" stroke="${C.goldSoft}" stroke-width="1"/>
+       ${label('POTION')}`,
+      'Potion Bottle',
     ),
   SPIRIT: () =>
     svg(
@@ -168,6 +168,22 @@ const GENERATORS: Record<SymbolId, () => string> = {
        <path d="M44 66 Q50 74 56 66" fill="none" stroke="${C.bronze}" stroke-width="1"/>
        ${label('SPIRIT')}`,
       'Spirit Ember',
+    ),
+  GLOVE: () =>
+    svg(
+      `<path d="M40 70 L40 48 Q40 36 50 34 Q60 36 60 48 L60 70" fill="none" stroke="${C.bronze}" stroke-width="2"/>
+       <path d="M44 48 L44 30 M50 46 L50 26 M56 48 L56 30" stroke="${C.gold}" stroke-width="1.4"/>
+       ${label('GLOVE')}`,
+      'Glove',
+    ),
+  MONSTER: () =>
+    svg(
+      `<ellipse cx="50" cy="50" rx="22" ry="18" fill="${C.burgundyDeep}" stroke="${C.crimson}" stroke-width="1.5"/>
+       <circle cx="42" cy="46" r="3" fill="${C.goldSoft}"/>
+       <circle cx="58" cy="46" r="3" fill="${C.goldSoft}"/>
+       <path d="M40 58 Q50 66 60 58" fill="none" stroke="${C.cream}" stroke-width="1.2"/>
+       ${label('MONSTER')}`,
+      'Monster',
     ),
 };
 

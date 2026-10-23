@@ -5,8 +5,8 @@ import {
 } from '../config/gameConfig';
 import type { Grid, LockedWildState, SpiritualityActivation } from './types';
 import type { SeededRng } from './rng';
-import { cloneGrid, respinEligible } from './reels';
-import { applyGlove, applyGrafting, ensureGraftSeed } from './wilds';
+import { cloneGrid, findPositions, respinEligible } from './reels';
+import { applyGraftingCluster } from './wilds';
 
 export function addCharge(current: number, amount: number): number {
   if (amount <= 0) return current;
@@ -18,7 +18,7 @@ export function shouldActivate(charge: number): boolean {
 }
 
 /**
- * Activate Spirituality: reset charge to 0 (no overflow), pick one weighted effect.
+ * Activate Spirituality: reset charge to 0 (no overflow), pick Grafting or Blind Stupidity.
  */
 export function activateSpirituality(
   rng: SeededRng,
@@ -45,77 +45,47 @@ export function activateSpirituality(
     effects[rng.weightedIndex(effects.map((e) => e.weight))]!;
 
   let nextGrid = cloneGrid(grid);
-  let nextLocked = [...lockedWilds];
-  let concealed: { reel: number; row: number }[] | null = null;
+  const nextLocked = [...lockedWilds];
+  const concealed: { reel: number; row: number }[] | null = null;
   let graftedReel: number | null = null;
   let graftedSymbol: SymbolId | null = null;
-  let hungerRespinDone = false;
+  const hungerRespinDone = false;
   const detail: Record<string, unknown> = {};
 
   switch (effect.id as SpiritualityEffectId) {
     case 'GRAFTING': {
-      /**
-       * Real spin grid first. Then:
-       * - Natural Wild present → that seed spreads to orthogonal neighbors.
-       * - No Wild → place ONE Wild (no spread) so Grafting still does something
-       *   without the full neighbor EV every time.
-       */
-      const blocked = new Set(
-        GAME_CONFIG.spirituality.grafting.cannotTransform as readonly SymbolId[],
-      );
-      const naturalWilds: { reel: number; row: number }[] = [];
-      const eligible: { reel: number; row: number }[] = [];
-      for (let r = 0; r < nextGrid.length; r++) {
-        for (let row = 0; row < nextGrid[r]!.length; row++) {
-          const s = nextGrid[r]![row]!;
-          if (s === 'WILD') naturalWilds.push({ reel: r, row });
-          if (!blocked.has(s)) eligible.push({ reel: r, row });
-        }
+      // Neighbor cluster → highest-paying symbol among them (Wild never downgrades).
+      const result = applyGraftingCluster(nextGrid, (items) => rng.pick(items));
+      nextGrid = result.grid;
+      if (result.seed) {
+        graftedReel = result.seed.reel;
+        graftedSymbol = result.targetSymbol;
+        detail.reel = result.seed.reel;
+        detail.row = result.seed.row;
+        detail.seed = result.seed;
       }
-      if (naturalWilds.length > 0) {
-        const seed = rng.pick(naturalWilds);
-        const seeded = ensureGraftSeed(nextGrid, seed);
-        nextGrid = seeded.grid;
-        const spread = applyGrafting(nextGrid, seeded.seed);
-        nextGrid = spread.grid;
-        graftedReel = seeded.seed.reel;
-        graftedSymbol = 'WILD';
-        detail.reel = seeded.seed.reel;
-        detail.row = seeded.seed.row;
-        detail.seedPlaced = false;
-        detail.spread = true;
-        detail.seed = seeded.seed;
-        detail.positions = spread.transformed;
-        detail.symbol = 'WILD';
-      } else if (eligible.length > 0) {
-        const seed = rng.pick(eligible);
-        const seeded = ensureGraftSeed(nextGrid, seed);
-        nextGrid = seeded.grid;
-        graftedReel = seeded.seed.reel;
-        graftedSymbol = 'WILD';
-        detail.reel = seeded.seed.reel;
-        detail.row = seeded.seed.row;
-        detail.seedPlaced = seeded.placed;
-        detail.spread = false;
-        detail.seed = seeded.seed;
-        detail.positions = [];
-        detail.symbol = 'WILD';
-      }
+      detail.positions = result.positions;
+      detail.cluster = result.cluster;
+      detail.targetSymbol = result.targetSymbol;
+      detail.symbol = result.targetSymbol;
+      detail.spread = result.positions.length > 0;
       break;
     }
     case 'BLIND_STUPIDITY': {
-      // Upgrade random eligible cells into high-paying symbols (affects wins).
+      // Convert 2–4 random LOW-paying symbols into highs — never downgrade highs.
       const cfg = GAME_CONFIG.spirituality.blindStupidity;
-      const blocked = new Set(cfg.cannotTransform as readonly SymbolId[]);
+      const lows = new Set(cfg.lowSymbols as readonly SymbolId[]);
       const eligible: { reel: number; row: number }[] = [];
       for (let r = 0; r < nextGrid.length; r++) {
         for (let row = 0; row < nextGrid[r]!.length; row++) {
           const s = nextGrid[r]![row]!;
-          if (!blocked.has(s)) eligible.push({ reel: r, row });
+          if (lows.has(s)) eligible.push({ reel: r, row });
         }
       }
+      const want = rng.int(cfg.transformCountMin, cfg.transformCountMax);
+      const count = Math.min(want, eligible.length);
       const shuffled = rng.shuffle(eligible);
-      const picks = shuffled.slice(0, cfg.transformCount);
+      const picks = shuffled.slice(0, count);
       const upgrades: { reel: number; row: number; symbol: SymbolId }[] = [];
       for (const pos of picks) {
         const symbol = rng.pick(cfg.highSymbols as readonly SymbolId[]);
@@ -124,68 +94,8 @@ export function activateSpirituality(
       }
       detail.positions = upgrades.map(({ reel, row }) => ({ reel, row }));
       detail.upgrades = upgrades;
-      // No veil — grid itself changed (concealed stays null).
-      break;
-    }
-    case 'CREEPING_HUNGER': {
-      const preserve = new Set(
-        GAME_CONFIG.spirituality.creepingHunger.preserve as readonly SymbolId[],
-      );
-      const mask: boolean[][] = nextGrid.map((reel) =>
-        reel.map((s) => preserve.has(s)),
-      );
-      nextGrid = respinEligible(nextGrid, mask, rng);
-      hungerRespinDone = true;
-      detail.preserved = true;
-      break;
-    }
-    case 'GLOVE': {
-      const eligible: { reel: number; row: number }[] = [];
-      const blocked = new Set(
-        GAME_CONFIG.spirituality.glove.cannotTransform as readonly SymbolId[],
-      );
-      for (let r = 0; r < nextGrid.length; r++) {
-        for (let row = 0; row < nextGrid[r]!.length; row++) {
-          const s = nextGrid[r]![row]!;
-          if (!blocked.has(s)) eligible.push({ reel: r, row });
-        }
-      }
-      if (eligible.length > 0) {
-        const pos = rng.pick(eligible);
-        nextGrid = applyGlove(nextGrid, pos.reel, pos.row);
-        detail.reel = pos.reel;
-        detail.row = pos.row;
-      }
-      break;
-    }
-    case 'LOCKED_WILD': {
-      const blocked = new Set(
-        GAME_CONFIG.spirituality.lockedWild.cannotPlaceOver as readonly SymbolId[],
-      );
-      const eligible: { reel: number; row: number }[] = [];
-      for (let r = 0; r < nextGrid.length; r++) {
-        for (let row = 0; row < nextGrid[r]!.length; row++) {
-          const s = nextGrid[r]![row]!;
-          if (!blocked.has(s)) eligible.push({ reel: r, row });
-        }
-      }
-      if (eligible.length > 0) {
-        const pos = rng.pick(eligible);
-        nextGrid[pos.reel]![pos.row] = 'WILD';
-        const duration = GAME_CONFIG.spirituality.lockedWild.durationSpins;
-        // One locked wild per cell — refresh duration instead of stacking entries.
-        nextLocked = nextLocked.filter(
-          (lw) => !(lw.reel === pos.reel && lw.row === pos.row),
-        );
-        nextLocked.push({
-          reel: pos.reel,
-          row: pos.row,
-          remainingSpins: duration,
-        });
-        detail.reel = pos.reel;
-        detail.row = pos.row;
-        detail.duration = duration;
-      }
+      detail.transformCount = upgrades.length;
+      detail.requestedCount = want;
       break;
     }
   }
@@ -200,6 +110,88 @@ export function activateSpirituality(
     graftedSymbol,
     hungerRespinDone,
     spiritualityIncrementalHint: 0,
+  };
+}
+
+/**
+ * Creeping Hunger: Glove + Monster on the same grid.
+ * Absorbs Monster(s) into locking wilds, converts Glove seats to wild,
+ * then respins non-preserved cells once.
+ */
+export function tryCreepingHunger(
+  rng: SeededRng,
+  grid: Grid,
+  lockedWilds: LockedWildState[],
+): {
+  triggered: boolean;
+  grid: Grid;
+  lockedWilds: LockedWildState[];
+  activation: SpiritualityActivation | null;
+} {
+  const gloves = findPositions(grid, 'GLOVE');
+  const monsters = findPositions(grid, 'MONSTER');
+  if (gloves.length === 0 || monsters.length === 0) {
+    return {
+      triggered: false,
+      grid,
+      lockedWilds,
+      activation: null,
+    };
+  }
+
+  let nextGrid = cloneGrid(grid);
+  let nextLocked = [...lockedWilds];
+  const duration = GAME_CONFIG.spirituality.creepingHunger.lockDurationSpins;
+  const absorbed: { reel: number; row: number }[] = [];
+
+  // Absorb every Monster → locking wild
+  for (const m of monsters) {
+    nextGrid[m.reel]![m.row] = 'WILD';
+    nextLocked = nextLocked.filter(
+      (lw) => !(lw.reel === m.reel && lw.row === m.row),
+    );
+    nextLocked.push({
+      reel: m.reel,
+      row: m.row,
+      remainingSpins: duration,
+    });
+    absorbed.push(m);
+  }
+
+  // Glove seats become wild (not necessarily locked)
+  for (const g of gloves) {
+    nextGrid[g.reel]![g.row] = 'WILD';
+  }
+
+  // Respin non-preserved cells (highs / wilds / specials stay)
+  const preserve = new Set(
+    GAME_CONFIG.spirituality.creepingHunger.preserve as readonly SymbolId[],
+  );
+  // Also preserve newly placed wilds from absorption
+  const mask: boolean[][] = nextGrid.map((reel) =>
+    reel.map((s) => preserve.has(s) || s === 'WILD'),
+  );
+  nextGrid = respinEligible(nextGrid, mask, rng);
+
+  // Re-apply locked wilds after respin
+  for (const lw of nextLocked) {
+    if (nextGrid[lw.reel]?.[lw.row] && nextGrid[lw.reel]![lw.row] !== 'SCATTER') {
+      nextGrid[lw.reel]![lw.row] = 'WILD';
+    }
+  }
+
+  return {
+    triggered: true,
+    grid: nextGrid,
+    lockedWilds: nextLocked,
+    activation: {
+      effect: 'CREEPING_HUNGER',
+      detail: {
+        absorbed,
+        gloves,
+        lockDuration: duration,
+      },
+    },
   };
 }
 

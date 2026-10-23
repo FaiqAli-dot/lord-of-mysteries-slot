@@ -39,7 +39,15 @@ export function evaluateLine(
   let target: SymbolId | null = null;
   for (const c of cells) {
     const def = SYMBOLS[c.symbol];
-    if (def.isScatter || def.isSequenceMarker || def.isSpirit) break;
+    if (
+      def.isScatter ||
+      def.isSequenceMarker ||
+      def.isSpirit ||
+      def.isGlove ||
+      def.isMonster
+    ) {
+      break;
+    }
     if (isWild(c.symbol)) continue;
     if (def.tier === 'high' || def.tier === 'low') {
       target = c.symbol;
@@ -57,7 +65,15 @@ export function evaluateLine(
 
   for (const c of cells) {
     const def = SYMBOLS[c.symbol];
-    if (def.isScatter || def.isSequenceMarker || def.isSpirit) break;
+    if (
+      def.isScatter ||
+      def.isSequenceMarker ||
+      def.isSpirit ||
+      def.isGlove ||
+      def.isMonster
+    ) {
+      break;
+    }
     if (c.symbol === target || (isWild(c.symbol) && canSubstitute(c.symbol, target))) {
       count++;
       positions.push({ reel: c.reel, row: c.row });
@@ -78,7 +94,8 @@ export function evaluateLine(
   const pays = SYMBOLS[target].pays;
   const payIndex = count - 3; // 0→3oak, 1→4oak, 2→5oak
   const mult = pays[Math.min(payIndex, 2)]! * GAME_CONFIG.payScale;
-  const baseCredits = Math.floor(mult * lineBet);
+  // Round (not floor) so payScale can tune RTP without integer cliffs.
+  const baseCredits = Math.round(mult * lineBet);
   if (baseCredits <= 0) return null;
 
   const wildMultiplier =

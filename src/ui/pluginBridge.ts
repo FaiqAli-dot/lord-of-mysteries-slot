@@ -175,17 +175,23 @@ export function showPaytableInPlugin(): void {
     })
     .join('');
 
-  const specialRows = (['WILD', 'SCATTER', 'SEQUENCE', 'SPIRIT'] as SymbolId[])
+  const specialRows = (
+    ['WILD', 'SCATTER', 'SEQUENCE', 'SPIRIT', 'GLOVE', 'MONSTER'] as SymbolId[]
+  )
     .map((id) => {
       const d = SYMBOLS[id];
       const role =
         id === 'WILD'
-          ? 'Substitutes for paying symbols; may expand a reel (2× on lines that use it). Never substitutes for Pathway Gate, Sequence Sigil, or Spirit Ember.'
+          ? "Fool’s Mirror — on Reel 3 only, expands to a full column (2× on lines that use it)."
           : id === 'SCATTER'
-            ? '3–4 open a bonus choice (Tarot Club or Crimson Moon). 5+ start Fool’s Miracles. Pays 2× / 8× / 40× total bet for 3 / 4 / 5.'
+            ? 'Crimson Tarot Card — 3 open Mode A/B choice; 4 auto Mode B; 5+ Fool’s Miracles. Pays 2× / 8× / 40× total bet.'
             : id === 'SEQUENCE'
-              ? 'Breaks paylines. Does not advance the Sequence Resonance meter.'
-              : 'Charges Spirituality (+1 each on the grid). Breaks paylines.';
+              ? 'Potion Bottle — permanently advances Sequence 9→0 (payout multiplier up to 15×).'
+              : id === 'SPIRIT'
+                ? 'Charges Spirituality (+1 each on the grid). Breaks paylines.'
+                : id === 'GLOVE'
+                  ? 'With Monster on the grid: Creeping Hunger — absorb Monster, locking wilds, re-spin.'
+                  : 'With Glove: Creeping Hunger trigger.';
       return `<tr><td>${d.name}</td><td>${role}</td></tr>`;
     })
     .join('');
@@ -195,11 +201,15 @@ export function showPaytableInPlugin(): void {
     .join('');
 
   const seqTiers = GAME_CONFIG.sequence.tiers
-    .map((t) => `${t.multiplier}× at ${t.winsRequired}+ paying spins`)
+    .map(
+      (t) =>
+        `Seq ${t.sequence} ${t.title}: ${t.multiplier}× (${t.potionsRequired}+ potions)`,
+    )
     .join(' · ');
 
   externalUiCall('ui-help-popup', 'addPage', {
     html: `<div class="pathways-paytable"><h2>${GAME_CONFIG.title}</h2>
+      <p>${GAME_CONFIG.subtitle}</p>
       <p>5×4 · 20 fixed paylines · left-to-right · ${GAME_CONFIG.demoLabel}</p>
       <p>Pays below are line-bet multiples (total bet ÷ 20), before the global pay scale.</p>
       <table><thead><tr><th>Symbol</th><th>3</th><th>4</th><th>5</th></tr></thead><tbody>${payRows}</tbody></table></div>`,
@@ -224,12 +234,12 @@ export function showPaytableInPlugin(): void {
   externalUiCall('ui-help-popup', 'addPage', {
     html: `<div class="pathways-paytable"><h2>Bonus rounds</h2>
       <h3>${GAME_CONFIG.bonuses.tarotClub.name}</h3>
-      <p>${GAME_CONFIG.bonuses.tarotClub.selections} gathering free spins. Each spin pays on the reels, then draws one random gathering reward (credits, session multiplier, wild enhance, or extra spin). Rewards are random — not player decisions.</p>
+      <p>${GAME_CONFIG.bonuses.tarotClub.spins} free spins (Medium-High). Sticky Justice / Hanged Man / The Sun, sticky wild seats, random multiplier cards. Max win ${GAME_CONFIG.bonuses.tarotClub.maxWinMult.toLocaleString()}× stake.</p>
       <h3>${GAME_CONFIG.bonuses.crimsonMoon.name}</h3>
-      <p>${GAME_CONFIG.bonuses.crimsonMoon.spins} free spins. Sticky Wild cells accumulate (cap ${GAME_CONFIG.bonuses.crimsonMoon.maxStickyWildCells}). Wild expansion is off. Moon multiplier starts at ${GAME_CONFIG.bonuses.crimsonMoon.moonMultStart}×, steps every ${GAME_CONFIG.bonuses.crimsonMoon.moonMultStepEvery} paying spins, caps at ${GAME_CONFIG.bonuses.crimsonMoon.moonMultCap}×. Retriggers capped.</p>
+      <p>${GAME_CONFIG.bonuses.crimsonMoon.spins} free spins (Ultra-High). Avalanche cascades with multipliers ${GAME_CONFIG.bonuses.crimsonMoon.cascadeMultipliers.join('→')}×. Max win ${GAME_CONFIG.bonuses.crimsonMoon.maxWinMult.toLocaleString()}× stake. Auto on 4 Crimson Tarot Cards.</p>
       <h3>${GAME_CONFIG.bonuses.foolsMiracles.name}</h3>
-      <p>${GAME_CONFIG.bonuses.foolsMiracles.spins} free spins with forced Wild expansion. Miracle multiplier starts at ${GAME_CONFIG.bonuses.foolsMiracles.miracleMultStart}×, steps every ${GAME_CONFIG.bonuses.foolsMiracles.miracleMultStepEvery} paying spins, caps at ${GAME_CONFIG.bonuses.foolsMiracles.miracleMultCap}×. Triggered by 5+ Pathway Gates.</p>
-      <p>No extra wager in bonus. ${GAME_CONFIG.sequence.displayName} resets when a bonus ends.</p></div>`,
+      <p>${GAME_CONFIG.bonuses.foolsMiracles.spins} free spins (Very High). 3×3 Fool throne + Historical Void wilds/highs. Max win ${GAME_CONFIG.bonuses.foolsMiracles.maxWinMult.toLocaleString()}× stake. Triggered by 5 Crimson Tarot Cards.</p>
+      <p>No extra wager in bonus. Sequence is permanent and does not reset.</p></div>`,
     css,
   });
   externalUiCall('ui-help-popup', 'show');

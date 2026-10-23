@@ -1,6 +1,7 @@
-import type { SpiritualityEffectId } from '../../../config/gameConfig';
+import type { SpiritualityEffectId, BonusModeId } from '../../../config/gameConfig';
 import { GAME_CONFIG } from '../../../config/gameConfig';
 import type { GameState, Grid } from '../../../engine/types';
+import { potionsForMultiplier } from '../../../engine/sequence';
 
 /** Shared cheat surface for LocalSession and RemoteSession. */
 export interface CheatSession {
@@ -13,14 +14,15 @@ export interface CheatSession {
   debugForceWildExpand(): void | Promise<void>;
   debugSetSequenceWins(wins: number): void | Promise<void>;
   debugClearForces(): void | Promise<void>;
+  debugForceCreepingHunger?(): void | Promise<void>;
+  debugForceBonusMode?(mode: BonusModeId): void | Promise<void>;
+  debugSeedHistoricalVoid?(): void | Promise<void>;
+  debugSetSequenceMultiplier?(mult: number): void | Promise<void>;
 }
 
 const EFFECTS: { id: SpiritualityEffectId; label: string }[] = [
-  { id: 'GLOVE', label: 'Glove' },
   { id: 'GRAFTING', label: 'Grafting' },
   { id: 'BLIND_STUPIDITY', label: 'Blind Stupidity' },
-  { id: 'CREEPING_HUNGER', label: 'Creeping Hunger' },
-  { id: 'LOCKED_WILD', label: 'Locked Wild' },
 ];
 
 /**
@@ -59,17 +61,23 @@ export class CheatsPanel {
           ).join('')}
         </section>
         <section>
-          <h4>Bonuses / wilds</h4>
-          <button type="button" data-act="scatter-3">3 Scatters (choice)</button>
-          <button type="button" data-act="scatter-4">4 Scatters (choice)</button>
-          <button type="button" data-act="scatter-5">5 Scatters (Fool's Miracles)</button>
-          <button type="button" data-act="wild-expand">Wild expand</button>
+          <h4>Base mechanics</h4>
+          <button type="button" data-act="fools-mirror">Fool's Mirror (Reel 3)</button>
+          <button type="button" data-act="creeping-hunger">Creeping Hunger (Glove+Monster)</button>
         </section>
         <section>
-          <h4>Sequence</h4>
-          <button type="button" data-act="seq-2">Sequence ×2</button>
-          <button type="button" data-act="seq-5">Sequence ×5</button>
-          <button type="button" data-act="seq-15">Sequence ×15</button>
+          <h4>Bonuses</h4>
+          <button type="button" data-act="scatter-3">3 Tarot → Choice (A/B)</button>
+          <button type="button" data-act="mode-a">Mode A: Tarot Club 10FS</button>
+          <button type="button" data-act="mode-b">Mode B: Crimson Moon 8FS Avalanche</button>
+          <button type="button" data-act="scatter-5">5 Tarot → Fool's Miracles</button>
+          <button type="button" data-act="seed-void">Seed Historical Void</button>
+        </section>
+        <section>
+          <h4>Sequence (permanent)</h4>
+          <button type="button" data-act="seq-2">Sequence ×2 (Magician)</button>
+          <button type="button" data-act="seq-5">Sequence ×5 (Bizarro Sorcerer)</button>
+          <button type="button" data-act="seq-15">Sequence ×15 (LotM)</button>
         </section>
         <section>
           <button type="button" data-act="clear" class="cheats-clear">Clear forces</button>
@@ -113,9 +121,24 @@ export class CheatsPanel {
       bits.push(`Meter full (${s?.spiritualityCharge})`);
     }
     if (s?.forceGrid) bits.push('Forced grid armed');
-    this.pendingLabel = bits.length ? `Armed: ${bits.join(' · ')}` : 'Nothing armed — pick a cheat, then spin.';
+    if (s?.forceCreepingHunger) bits.push('Creeping Hunger armed');
+    if (s?.forceFoolsMirror) bits.push("Fool's Mirror armed");
+    if (s?.forceBonusMode) bits.push(`Bonus: ${s.forceBonusMode}`);
+    this.pendingLabel = bits.length
+      ? `Armed: ${bits.join(' · ')}`
+      : 'Nothing armed — pick a cheat, then spin.';
     const el = this.root?.querySelector('.cheats-pending');
     if (el) el.textContent = this.pendingLabel;
+  }
+
+  private async setSequenceMult(mult: number): Promise<void> {
+    if (this.session.debugSetSequenceMultiplier) {
+      await this.session.debugSetSequenceMultiplier(mult);
+      return;
+    }
+    // Fallback: pass multiplier; SlotGame.debugSetSequenceWins detects tier mults.
+    // Also compute potions so older servers still land on the right tier.
+    await this.session.debugSetSequenceWins(potionsForMultiplier(mult));
   }
 
   private async handle(btn: HTMLElement): Promise<void> {
@@ -133,23 +156,48 @@ export class CheatsPanel {
       case 'scatter-3':
         await this.session.debugForceScatters(3);
         break;
-      case 'scatter-4':
-        await this.session.debugForceScatters(4);
-        break;
       case 'scatter-5':
-        await this.session.debugForceScatters(5);
+        if (this.session.debugForceBonusMode) {
+          await this.session.debugForceBonusMode('FOOLS_MIRACLES');
+        } else {
+          await this.session.debugForceScatters(5);
+        }
         break;
-      case 'wild-expand':
+      case 'mode-a':
+        if (this.session.debugForceBonusMode) {
+          await this.session.debugForceBonusMode('TAROT_CLUB');
+        } else {
+          await this.session.debugForceScatters(3);
+        }
+        break;
+      case 'mode-b':
+        if (this.session.debugForceBonusMode) {
+          await this.session.debugForceBonusMode('CRIMSON_MOON');
+        } else {
+          await this.session.debugForceScatters(4);
+        }
+        break;
+      case 'fools-mirror':
         await this.session.debugForceWildExpand();
         break;
+      case 'creeping-hunger':
+        if (this.session.debugForceCreepingHunger) {
+          await this.session.debugForceCreepingHunger();
+        }
+        break;
+      case 'seed-void':
+        if (this.session.debugSeedHistoricalVoid) {
+          await this.session.debugSeedHistoricalVoid();
+        }
+        break;
       case 'seq-2':
-        await this.session.debugSetSequenceWins(200);
+        await this.setSequenceMult(2);
         break;
       case 'seq-5':
-        await this.session.debugSetSequenceWins(750);
+        await this.setSequenceMult(5);
         break;
       case 'seq-15':
-        await this.session.debugSetSequenceWins(2000);
+        await this.setSequenceMult(15);
         break;
       case 'clear':
         await this.session.debugClearForces();

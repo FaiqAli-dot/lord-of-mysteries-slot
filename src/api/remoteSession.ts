@@ -176,6 +176,24 @@ export class RemoteSession {
     this.apply(await this.api.debug(this.requireId(), { op: 'setSequenceWins', wins }));
   }
 
+  async debugSetSequenceMultiplier(mult: number): Promise<void> {
+    this.apply(
+      await this.api.debug(this.requireId(), { op: 'setSequenceMultiplier', mult }),
+    );
+  }
+
+  async debugForceCreepingHunger(): Promise<void> {
+    this.apply(await this.api.debug(this.requireId(), { op: 'forceCreepingHunger' }));
+  }
+
+  async debugForceBonusMode(mode: BonusModeId): Promise<void> {
+    this.apply(await this.api.debug(this.requireId(), { op: 'forceBonusMode', mode }));
+  }
+
+  async debugSeedHistoricalVoid(): Promise<void> {
+    this.apply(await this.api.debug(this.requireId(), { op: 'seedHistoricalVoid' }));
+  }
+
   async debugClearForces(): Promise<void> {
     this.apply(await this.api.debug(this.requireId(), { op: 'clearForces' }));
   }

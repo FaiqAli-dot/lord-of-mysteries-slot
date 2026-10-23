@@ -10,6 +10,10 @@ export type DebugOp =
   | { op: 'forceScatters'; count: number }
   | { op: 'forceWildExpand' }
   | { op: 'setSequenceWins'; wins: number }
+  | { op: 'setSequenceMultiplier'; mult: number }
+  | { op: 'forceCreepingHunger' }
+  | { op: 'forceBonusMode'; mode: BonusModeId }
+  | { op: 'seedHistoricalVoid' }
   | { op: 'clearForces' };
 
 export class ApiError extends Error {

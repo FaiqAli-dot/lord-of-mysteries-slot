@@ -1,16 +1,19 @@
 import {
   GAME_CONFIG,
+  HIGH_SYMBOLS,
   type SymbolId,
   type SpiritualityEffectId,
 } from '../config/gameConfig';
 import type {
   Attribution,
   Grid,
+  HistoricalVoidEntry,
   LockedWildState,
   RoundAccounting,
   SpinResult,
   SpiritualityActivation,
 } from './types';
+import type { CascadeStep } from './cascade';
 import { SeededRng } from './rng';
 import { cloneGrid, countSymbol, spinReels } from './reels';
 import { evaluateAllLines, evaluateScatter, countScatters } from './paylines';
@@ -20,9 +23,11 @@ import {
   addCharge,
   shouldActivate,
   activateSpirituality,
+  tryCreepingHunger,
   tickLockedWilds,
 } from './spirituality';
-import { eligibleBonusesForScatterCount } from './bonuses';
+import { eligibleBonusesForScatterCount, applyStickyTarot } from './bonuses';
+import { resolveCascades } from './cascade';
 
 export function emptyAttribution(): Attribution {
   return { BASE: 0, BONUS: 0, SEQUENCE: 0, SPIRITUALITY: 0 };
@@ -37,16 +42,18 @@ export interface PipelineInput {
   lockedWilds: LockedWildState[];
   /** When true, payouts attribute base portion to BONUS instead of BASE. */
   inBonus: boolean;
-  /** Extra bonus multiplier (moon / miracle / tarot). */
+  /** Extra bonus multiplier (moon / miracle / tarot card). */
   bonusMultiplier: number;
-  /** Force expand all wilds (Fool's Miracles). */
+  /** Force expand all wilds (legacy Fool's Miracles). */
   forceExpandWilds: boolean;
   /** When false, skip Fool's Mirror reel expansion (e.g. Crimson sticky cells). */
   allowWildExpansion: boolean;
-  /** Sticky wild reels (Crimson Moon legacy). */
+  /** Sticky wild reels (legacy). */
   stickyWildReels: number[];
-  /** Sticky wild cells (Crimson Moon). */
+  /** Sticky wild cells. */
   stickyWildCells: { reel: number; row: number }[];
+  /** Mode A sticky tarot members. */
+  stickyTarotCells?: { reel: number; row: number; symbol: SymbolId }[];
   /** Tarot wild enhance: treat expanded wild multiplier as +1. */
   tarotWildEnhance: boolean;
   /** Optional forced grid (tests / cheats). */
@@ -57,39 +64,25 @@ export interface PipelineInput {
   allowSpirituality: boolean;
   /** Pre-existing charge earning context. */
   chargeInBonus: boolean;
+  /** Enable Crimson Moon avalanche cascades. */
+  cascadeEnabled?: boolean;
+  /** Fool's Miracles: paint 3×3 Fool throne. */
+  foolsThrone?: boolean;
+  /** Historical Void buffer to inject during Fool's Miracles. */
+  historicalVoid?: HistoricalVoidEntry[];
+  /** Soft max-win remaining for this bonus (credits); null = uncapped. */
+  maxWinRemaining?: number | null;
 }
 
 /**
- * Single central resolution pipeline (spec order):
- * 1 base outcome
- * 2 pre-evaluation transformations (Spirituality may alter grid)
- * 3 Grafting and grid mods
- * 4 expansions and Locked Wild positions
- * 5 scatter counts and bonus eligibility
- * 6 evaluate 20 lines
- * 7 base payouts
- * 8 Fool's Mirror multipliers
- * 9 Sequence and Spirituality modifiers per attribution
- * 10 bonus-specific rules
- * 11 aggregate without double counting
- * 12 update accounting (caller applies balance/UI)
- *
- * Spirituality activation timing:
- * Charge is computed from the *pre-effect* win potential when possible, but
- * activation that modifies the grid must occur before final evaluation.
- * Convention used here:
- * - Generate base grid + apply locked wilds / sticky wilds
- * - Tentatively evaluate to decide charge from wins + spirit symbols
- * - If threshold reached, activate effect (may modify grid), then re-evaluate fully
- * - Blind Stupidity upgrades random cells to high symbols (counts as grid mod)
- * - Spirituality incremental attribution = max(0, finalAfterWild - baselineAfterWild)
- *   where baseline is evaluation without spirituality grid mods (same seed outcome base)
+ * Single central resolution pipeline for Sefirah Castle Sanctum.
  */
 export function resolveSpin(input: PipelineInput): SpinResult & {
   lockedWildsAfter: LockedWildState[];
   concealed: { reel: number; row: number }[] | null;
   graftedReel: number | null;
   graftedSymbol: SymbolId | null;
+  historicalVoidDelta: HistoricalVoidEntry[];
 } {
   const {
     rng,
@@ -104,17 +97,44 @@ export function resolveSpin(input: PipelineInput): SpinResult & {
     allowWildExpansion,
     stickyWildReels,
     stickyWildCells,
+    stickyTarotCells = [],
     tarotWildEnhance,
     forceGrid,
     forceSpiritualityEffect,
     allowSpirituality,
+    cascadeEnabled = false,
+    foolsThrone = false,
+    historicalVoid = [],
+    maxWinRemaining = null,
   } = input;
 
   // 1. Base outcome
   let grid = forceGrid ? cloneGrid(forceGrid) : spinReels(rng);
 
-  // Apply sticky wilds (bonus) — reels and/or cells
-  if (stickyWildReels.length > 0 || stickyWildCells.length > 0) {
+  // Fool's Miracles: 3×3 Fool on central throne
+  if (foolsThrone) {
+    grid = cloneGrid(grid);
+    const throne = GAME_CONFIG.bonuses.foolsMiracles.foolThrone;
+    for (const r of throne.reels) {
+      for (const row of throne.rows) {
+        if (grid[r]![row] !== 'SCATTER') {
+          grid[r]![row] = throne.symbol;
+        }
+      }
+    }
+  }
+
+  // Historical Void injection
+  if (historicalVoid.length > 0 && foolsThrone) {
+    grid = injectHistoricalVoid(grid, historicalVoid, rng);
+  }
+
+  // Apply sticky wilds / tarot
+  if (
+    stickyWildReels.length > 0 ||
+    stickyWildCells.length > 0 ||
+    stickyTarotCells.length > 0
+  ) {
     grid = cloneGrid(grid);
     for (const r of stickyWildReels) {
       for (let row = 0; row < GAME_CONFIG.rows; row++) {
@@ -126,6 +146,9 @@ export function resolveSpin(input: PipelineInput): SpinResult & {
         grid[c.reel]![c.row] = 'WILD';
       }
     }
+    if (stickyTarotCells.length > 0) {
+      grid = applyStickyTarot(grid, stickyTarotCells);
+    }
   }
 
   // Apply existing locked wilds
@@ -135,11 +158,6 @@ export function resolveSpin(input: PipelineInput): SpinResult & {
     activeLocked.map((lw) => ({ reel: lw.reel, row: lw.row })),
   );
 
-  /**
-   * Spirituality timing (UI contract):
-   * - Filling the meter does NOT fire on the same spin — Idle shows READY.
-   * - The *next* spin activates using the pre-spin charge (or a cheat force).
-   */
   let charge = spiritualityCharge;
   let spiritualityActivation: SpiritualityActivation | null = null;
   let concealed: { reel: number; row: number }[] | null = null;
@@ -148,10 +166,8 @@ export function resolveSpin(input: PipelineInput): SpinResult & {
   let workingLocked = activeLocked;
   let spiritualityGridModified = false;
 
-  /** Natural reel result (after sticky/locked) — shown on drop before feature morph. */
   const preFeatureGrid = cloneGrid(grid);
-  const forceSpirit =
-    allowSpirituality && forceSpiritualityEffect != null;
+  const forceSpirit = allowSpirituality && forceSpiritualityEffect != null;
   const preArmed =
     allowSpirituality &&
     GAME_CONFIG.spirituality.maxActivationsPerSpin >= 1 &&
@@ -177,7 +193,26 @@ export function resolveSpin(input: PipelineInput): SpinResult & {
     spiritualityGridModified = true;
   }
 
-  // Baseline = pre-spirituality grid; final = after activation mods
+  // Creeping Hunger: Glove + Monster on the grid (independent of meter)
+  const hunger = tryCreepingHunger(rng, grid, workingLocked);
+  if (hunger.triggered) {
+    grid = hunger.grid;
+    workingLocked = hunger.lockedWilds;
+    spiritualityGridModified = true;
+    // Prefer showing Creeping Hunger if it fired (or attach if no spirit effect)
+    if (!spiritualityActivation) {
+      spiritualityActivation = hunger.activation;
+    } else if (hunger.activation) {
+      spiritualityActivation = {
+        ...spiritualityActivation,
+        detail: {
+          ...spiritualityActivation.detail,
+          creepingHunger: hunger.activation.detail,
+        },
+      };
+    }
+  }
+
   const baselineEval = evaluateGridPayouts(
     preFeatureGrid,
     totalBet,
@@ -187,118 +222,176 @@ export function resolveSpin(input: PipelineInput): SpinResult & {
   );
   const spiritSymbols = countSymbol(preFeatureGrid, 'SPIRIT');
 
-  // Charge from this spin — may fill the meter for the *next* spin (no same-spin fire).
+  // Charge from this spin — non-winning spins (+ SPIRIT) feed the meter for next spin.
   const winCombos =
     baselineEval.lineWins.length + (baselineEval.scatterWin ? 1 : 0);
   const mayCharge = !inBonus || GAME_CONFIG.spirituality.chargeInBonus;
   if (mayCharge && !spiritualityActivation) {
     const winCharge =
-      winCombos > 0 ? GAME_CONFIG.spirituality.chargePerWin : 0;
+      winCombos > 0
+        ? GAME_CONFIG.spirituality.chargePerWin
+        : GAME_CONFIG.spirituality.chargePerNonWin;
     charge = addCharge(
       charge,
       winCharge + spiritSymbols * GAME_CONFIG.spirituality.chargePerSpiritSymbol,
     );
   }
 
-  // 4. Expansions (after spirituality mods)
-  const finalEval = evaluateGridPayouts(
-    grid,
-    totalBet,
-    forceExpandWilds,
-    tarotWildEnhance,
-    allowWildExpansion,
-  );
-  const evalGrid = finalEval.evalGrid;
-  const expandedWildReels = finalEval.expandedWildReels;
-  const lineWins = finalEval.lineWins;
-  const scatterWin = finalEval.scatterWin;
+  // Cascading Crimson Moon path
+  let cascadeSteps: CascadeStep[] | null = null;
+  let evalGrid: Grid;
+  let expandedWildReels: number[];
+  let lineWins = baselineEval.lineWins;
+  let scatterWin = baselineEval.scatterWin;
+  let combinedAfterWild = 0;
+
+  if (cascadeEnabled) {
+    const { grid: expanded, expandedReels } =
+      allowWildExpansion || forceExpandWilds
+        ? applyWildExpansion(grid)
+        : { grid: cloneGrid(grid), expandedReels: [] as number[] };
+    const cascade = resolveCascades(
+      expanded,
+      totalBet,
+      new Set(expandedReels),
+      rng,
+    );
+    cascadeSteps = cascade.steps;
+    evalGrid = cascade.finalGrid;
+    expandedWildReels = expandedReels;
+    lineWins = cascade.lineWins;
+    scatterWin = cascade.scatterWin;
+    combinedAfterWild = cascade.totalCredits;
+  } else {
+    const finalEval = evaluateGridPayouts(
+      grid,
+      totalBet,
+      forceExpandWilds,
+      tarotWildEnhance,
+      allowWildExpansion,
+    );
+    evalGrid = finalEval.evalGrid;
+    expandedWildReels = finalEval.expandedWildReels;
+    lineWins = finalEval.lineWins;
+    scatterWin = finalEval.scatterWin;
+    const lineCreditsAfterWild = lineWins.reduce(
+      (s, w) => s + w.afterWildCredits,
+      0,
+    );
+    combinedAfterWild = lineCreditsAfterWild + (scatterWin?.baseCredits ?? 0);
+  }
+
   const scatterCount = countScatters(evalGrid);
 
   // Spirituality incremental: difference in after-wild line+scatter credits
   const baselineAfterWild =
     baselineEval.lineWins.reduce((s, w) => s + w.afterWildCredits, 0) +
     (baselineEval.scatterWin?.baseCredits ?? 0);
-  const finalAfterWild =
-    lineWins.reduce((s, w) => s + w.afterWildCredits, 0) +
-    (scatterWin?.baseCredits ?? 0);
   let spiritualityIncrement = spiritualityGridModified
-    ? Math.max(0, finalAfterWild - baselineAfterWild)
+    ? Math.max(0, combinedAfterWild - baselineAfterWild)
     : 0;
+  // Cascades attribute their full combined as the win pool; spirituality delta
+  // is still isolated when features modified the pre-cascade grid.
+  if (cascadeEnabled && spiritualityGridModified) {
+    // Use first cascade step's pre-mult credits vs baseline if available
+    const first = cascadeSteps?.[0];
+    if (first) {
+      const firstRaw =
+        first.lineWins.reduce((s, w) => s + w.afterWildCredits, 0) +
+        (first.scatterWin?.baseCredits ?? 0);
+      spiritualityIncrement = Math.max(0, firstRaw - baselineAfterWild);
+    }
+  }
 
-  // 5. Scatter bonus eligibility (from final grid, post-mods but grafting cannot add scatters)
   const { trigger: bonusTrigger, bonuses: eligibleBonuses } =
     eligibleBonusesForScatterCount(scatterCount);
 
-  // 7–9. Aggregate with attribution
   const attr = emptyAttribution();
   const baseCategory: keyof Attribution = inBonus ? 'BONUS' : 'BASE';
 
-  // Line wins: wild already in afterWildCredits
-  let lineCreditsAfterWild = 0;
-  for (const w of lineWins) {
-    lineCreditsAfterWild += w.afterWildCredits;
-  }
-  const scatterCredits = scatterWin?.baseCredits ?? 0;
-  let combinedAfterWild = lineCreditsAfterWild + scatterCredits;
-
-  // Subtract spirituality increment from the combined pool before Sequence split
-  // so spirituality is attributed exclusively.
+  // Sequence multiplies base-game payouts only (permanent meter; does not inflate bonuses).
+  const seqMultApplied = inBonus ? 1 : sequenceMultiplier;
   const afterWildForSeq = Math.max(0, combinedAfterWild - spiritualityIncrement);
+  const seq = applySequenceMultiplier(afterWildForSeq, seqMultApplied);
+  const seqOnSpirit = applySequenceMultiplier(
+    spiritualityIncrement,
+    seqMultApplied,
+  );
 
-  // Sequence applies to eligible payouts (after wild, after isolating spirituality increment)
-  const seq = applySequenceMultiplier(afterWildForSeq, sequenceMultiplier);
-  const seqOnSpirit = applySequenceMultiplier(spiritualityIncrement, sequenceMultiplier);
-
-  // Attribution (mutually exclusive):
-  // - baseCategory gets seq.basePortion
-  // - SEQUENCE gets seq.sequencePortion + seqOnSpirit.sequencePortion
-  // - SPIRITUALITY gets seqOnSpirit.basePortion (the 1x spirituality increment)
   attr[baseCategory] += seq.basePortion;
   attr.SEQUENCE += seq.sequencePortion + seqOnSpirit.sequencePortion;
   attr.SPIRITUALITY += seqOnSpirit.basePortion;
 
   let payout = seq.total + seqOnSpirit.total;
 
-  // 10. Bonus-specific multiplier (moon/miracle) — attributed to BONUS for the incremental part
   if (bonusMultiplier > 1 && payout > 0) {
     const boosted = Math.floor(payout * bonusMultiplier);
     const bonusInc = boosted - payout;
-    // Re-attribute: scale categories proportionally would double-count complexity;
-    // Convention: bonus mode multiplier increment → BONUS exclusively.
     attr.BONUS += bonusInc;
     payout = boosted;
   }
 
-  // Advance Sequence AFTER applying current multiplier.
-  // Flag name is historical: advances once per winning *spin* (≥1 combo), not per line.
-  let seqWinsAfter = sequenceWins;
-  let seqMultAfter = sequenceMultiplier;
-  const finalWinCombos = lineWins.length + (scatterWin ? 1 : 0);
-  if (GAME_CONFIG.sequence.advanceOnWinningCombination && finalWinCombos > 0) {
-    const adv = advanceSequence(sequenceWins, 1);
-    seqWinsAfter = adv.wins;
-    seqMultAfter = adv.multiplier;
+  // Soft max-win clamp (bonus session)
+  if (maxWinRemaining != null && payout > maxWinRemaining) {
+    const scale = maxWinRemaining / payout;
+    payout = maxWinRemaining;
+    attr.BASE = Math.floor(attr.BASE * scale);
+    attr.BONUS = Math.floor(attr.BONUS * scale);
+    attr.SEQUENCE = Math.floor(attr.SEQUENCE * scale);
+    attr.SPIRITUALITY = Math.floor(attr.SPIRITUALITY * scale);
+    // Fix rounding so categories still sum
+    const sum = attr.BASE + attr.BONUS + attr.SEQUENCE + attr.SPIRITUALITY;
+    if (sum !== payout) attr.BONUS += payout - sum;
   }
 
-  // Tick locked wilds after resolution
+  // Advance Sequence by Potion Bottles on the final grid (permanent; base + bonus).
+  let seqWinsAfter = sequenceWins;
+  let seqMultAfter = sequenceMultiplier;
+  if (GAME_CONFIG.sequence.advanceOnPotionBottles) {
+    const potions = countSymbol(evalGrid, 'SEQUENCE');
+    if (potions > 0) {
+      const adv = advanceSequence(sequenceWins, potions);
+      seqWinsAfter = adv.wins;
+      seqMultAfter = adv.multiplier;
+    }
+  }
+
   const lockedWildsAfter = tickLockedWilds(workingLocked);
+
+  // Historical Void: record highs from non-winning base spins
+  const historicalVoidDelta: HistoricalVoidEntry[] = [];
+  if (!inBonus && payout === 0) {
+    const highs = new Set(HIGH_SYMBOLS as readonly SymbolId[]);
+    for (let r = 0; r < evalGrid.length; r++) {
+      for (let row = 0; row < evalGrid[r]!.length; row++) {
+        const s = evalGrid[r]![row]!;
+        if (highs.has(s)) {
+          historicalVoidDelta.push({ symbol: s, reel: r, row });
+        }
+      }
+    }
+  }
 
   const accounting: RoundAccounting = {
     wager: inBonus ? 0 : totalBet,
     totalPayout: payout,
     attribution: { ...attr },
     hit: payout > 0,
-    // CHOICE stays null until the player (or sim) selects a mode.
     bonusTriggered:
-      !inBonus && bonusTrigger === 'FOOLS_MIRACLES' ? 'FOOLS_MIRACLES' : null,
-    sequenceMultiplierApplied: sequenceMultiplier,
+      !inBonus && bonusTrigger === 'FOOLS_MIRACLES'
+        ? 'FOOLS_MIRACLES'
+        : !inBonus && bonusTrigger === 'CRIMSON_MOON'
+          ? 'CRIMSON_MOON'
+          : null,
+    sequenceMultiplierApplied: seqMultApplied,
     spiritualityActivated: spiritualityActivation !== null,
     spiritualityEffect: spiritualityActivation?.effect ?? null,
   };
 
   return {
     grid: evalGrid,
-    preFeatureGrid: spiritualityActivation ? preFeatureGrid : null,
+    preFeatureGrid:
+      spiritualityActivation || hunger.triggered ? preFeatureGrid : null,
     lineWins,
     scatterWin,
     scatterCount,
@@ -314,12 +407,35 @@ export function resolveSpin(input: PipelineInput): SpinResult & {
     bonusTrigger: inBonus ? null : bonusTrigger,
     eligibleBonuses: inBonus ? [] : eligibleBonuses,
     expandedWildReels,
+    cascadeSteps,
     accounting,
     lockedWildsAfter,
     concealed,
     graftedReel,
     graftedSymbol,
+    historicalVoidDelta,
   };
+}
+
+function injectHistoricalVoid(
+  grid: Grid,
+  voidBuf: HistoricalVoidEntry[],
+  rng: SeededRng,
+): Grid {
+  const next = cloneGrid(grid);
+  const cfg = GAME_CONFIG.historicalVoid;
+  const picks = rng.shuffle([...voidBuf]).slice(0, cfg.injectCount);
+  for (const entry of picks) {
+    const reel = Math.max(0, Math.min(GAME_CONFIG.reels - 1, entry.reel));
+    const row = Math.max(0, Math.min(GAME_CONFIG.rows - 1, entry.row));
+    if (next[reel]![row] === 'SCATTER') continue;
+    if (rng.next() < cfg.voidWildChance) {
+      next[reel]![row] = 'WILD'; // Void Wild
+    } else {
+      next[reel]![row] = entry.symbol;
+    }
+  }
+  return next;
 }
 
 function evaluateGridPayouts(
@@ -331,12 +447,21 @@ function evaluateGridPayouts(
 ) {
   let work = cloneGrid(grid);
   if (forceExpandWilds) {
-    // Force all wild-bearing non-scatter reels to expand
     for (let r = 0; r < work.length; r++) {
-      if (work[r]!.some((s) => s === 'WILD') && !work[r]!.some((s) => s === 'SCATTER')) {
+      if (
+        work[r]!.some((s) => s === 'WILD') &&
+        !work[r]!.some((s) => s === 'SCATTER')
+      ) {
         for (let row = 0; row < work[r]!.length; row++) {
           const s = work[r]![row]!;
-          if (s !== 'SEQUENCE' && s !== 'SPIRIT') work[r]![row] = 'WILD';
+          if (
+            s !== 'SEQUENCE' &&
+            s !== 'SPIRIT' &&
+            s !== 'GLOVE' &&
+            s !== 'MONSTER'
+          ) {
+            work[r]![row] = 'WILD';
+          }
         }
       }
     }
@@ -350,8 +475,7 @@ function evaluateGridPayouts(
   if (tarotWildEnhance) {
     lineWins = lineWins.map((w) => {
       if (!w.usedExpandedWild) return w;
-      const extra = GAME_CONFIG.wild.expandedMultiplier; // already applied once; enhance adds +1 → treat as 3x total from base
-      // afterWild currently = base * 2; enhance to base * 3
+      const extra = GAME_CONFIG.wild.expandedMultiplier;
       const afterWildCredits = Math.floor(w.baseCredits * (extra + 1));
       return { ...w, wildMultiplier: extra + 1, afterWildCredits };
     });
