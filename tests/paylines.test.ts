@@ -94,17 +94,20 @@ describe('paylines', () => {
     expect(evaluateScatter(place(2), 20)).toBeNull();
   });
 
-  it('expanded wild applies 2x only to wins using expanded wild', () => {
+  it("Fool's Mirror expands only Reel 3 (index 2) and applies 2x", () => {
+    // Put a Wild on the middle reel so Fool's Mirror expands that column only.
     const g = gridFrom([
-      ['WILD', 'FOOL', 'FOOL', 'KING', 'QUEEN'],
-      ['WILD', 'ACE', 'ACE', 'ACE', 'ACE'],
-      ['WILD', 'KING', 'KING', 'KING', 'KING'],
-      ['WILD', 'QUEEN', 'QUEEN', 'QUEEN', 'QUEEN'],
+      ['FOOL', 'FOOL', 'WILD', 'FOOL', 'FOOL'],
+      ['ACE', 'ACE', 'JACK', 'ACE', 'ACE'],
+      ['KING', 'KING', 'QUEEN', 'KING', 'KING'],
+      ['QUEEN', 'QUEEN', 'ACE', 'QUEEN', 'QUEEN'],
     ]);
     const { grid: expanded, expandedReels } = applyWildExpansion(g);
-    expect(expandedReels).toContain(0);
+    expect(expandedReels).toEqual([2]);
+    expect(expanded[2]!.every((s) => s === 'WILD')).toBe(true);
     const wins = evaluateAllLines(expanded, 20, new Set(expandedReels));
     const line0 = wins.find((w) => w.lineIndex === 0);
+    expect(line0?.symbol).toBe('FOOL');
     expect(line0?.usedExpandedWild).toBe(true);
     expect(line0?.wildMultiplier).toBe(2);
     expect(line0!.afterWildCredits).toBe(line0!.baseCredits * 2);

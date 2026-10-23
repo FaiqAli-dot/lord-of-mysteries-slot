@@ -112,50 +112,41 @@ Rules:
 
 ---
 
-### 3.4 Spirituality (meter + one of five chaos effects)
+### 3.4 Spirituality (meter + Grafting / Blind Stupidity)
 
 A right-side **Spirituality meter** charges toward threshold **12**:
 
-- +1 per **winning spin** (not per line),
-- +1 per **Spirit Ember** on the grid,
+- +1 per **non-winning** spin (and +1 per **Spirit Ember** on the grid),
 - Can charge in bonuses (`chargeInBonus: true`),
 - Carries into bonus,
 - **At most one activation per spin**,
 - **Activation is deferred:** filling the meter does **not** fire on the same spin; the **next** spin awakens the effect (or a force-cheat fires immediately). Idle shows a “ready” pulse when the meter is full.
 
-When activated, **exactly one** weighted effect fires (equal weights today = 20 each):
+When activated, **exactly one** of two weighted effects fires (50/50):
 
 #### Grafting
 
-- Picks a random eligible **seed** cell.
-- Seed + **orthogonal neighbors** (up/down/left/right) become **Wild** for that spin.
-- Never overwrites Scatter / Sequence / Spirit.
-- Optional diagonals exist in config (`diagonals: false` currently).
+- Picks a random eligible **anchor** cell.
+- Considers the anchor + **orthogonal neighbors** (up/down/left/right).
+- Finds the **highest-paying** symbol among that cluster (by 5-oak paytable rank; **Wild ranks highest**).
+- Transforms transformable cluster cells into that target symbol.
+- Never overwrites Crimson Tarot Card / Potion Bottle / Spirit / Glove / Monster.
+- Never converts a Wild into a lower-paying symbol.
+- **Does change math** (incremental SPIRITUALITY attribution).
 
 #### Blind Stupidity
 
-- Upgrades **3** random eligible cells into **high** symbols (Fool / Magician / Priestess / Wheel / Hanged / World).
-- Never overwrites Scatter / Sequence / Spirit / Wild.
+- Randomly upgrades **2–4** (inclusive) **low-paying** cells into high symbols (Fool / Magician / Justice / The Sun / Hanged Man / World).
+- Never picks highs, Wild, Scatter, Potion, Spirit, Glove, or Monster.
+- If fewer than 2 lows exist, upgrades as many as available (including zero).
 - **Does change math** (incremental spirituality attribution).
 - Presentation: banner + hard pulse/flash on upgraded cells.
 
-#### Creeping Hunger
+#### Creeping Hunger (not from the meter)
 
-- **One** respin of non-preserved cells.
-- Preserves highs + Wilds (and Scatters for trigger integrity).
-- No recursive hunger respins.
+- Grid-triggered when **Glove + Monster** share the board: absorb Monster → locking wilds, then one respin of non-preserved cells.
 
-#### Glove
-
-- Transforms **one** eligible non-special cell into Wild.
-- Cannot transform Scatter / Sequence / Spirit / Wild.
-
-#### Locked Wild
-
-- Places a Wild that lasts **this spin + next** (`durationSpins: 2`), then expires.
-- Applied onto subsequent grids before evaluation.
-
-**Research note:** Spirituality is the “slot as event generator” layer — five distinct micro-features from one meter. Good for marketing variety; needs clear VFX so players can tell which event they got.
+**Research note:** Spirituality is the “slot as event generator” layer — two meter-awakened micro-features plus Creeping Hunger as a separate grid combo. Clear VFX must show which event fired.
 
 ---
 

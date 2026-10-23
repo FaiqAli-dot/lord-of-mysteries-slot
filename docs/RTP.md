@@ -19,7 +19,7 @@ Every credited unit belongs to **exactly one** category:
 | **BASE** | Line + scatter credits from base-game spins after Fool's Mirror wild multipliers, **before** Sequence uplift and Spirituality incremental uplift. |
 | **BONUS** | All credits awarded inside Tarot Club / Crimson Moon / Fool's Miracles, including the 1× portion of bonus-spin line wins and Tarot pick credits. Bonus-mode multipliers (moon / miracle / tarot) **increments** are BONUS. |
 | **SEQUENCE** | Only the **incremental** credits from Sequence multiplier above 1× (`floor(credits × mult) − credits`). Applies in base and bonus. |
-| **SPIRITUALITY** | Only the **incremental** credits caused by Spirituality grid modifications (Grafting, Glove, Locked Wild, Blind Stupidity upgrades, Creeping Hunger respin delta). Sequence uplift on the spirituality increment is attributed to SEQUENCE. |
+| **SPIRITUALITY** | Only the **incremental** credits caused by Spirituality grid modifications (Grafting neighbor→highest-pay cluster, Blind Stupidity 2–4 low→high upgrades, Creeping Hunger Glove+Monster respin delta). Sequence uplift on the spirituality increment is attributed to SEQUENCE. |
 
 ## Simulation
 
@@ -72,7 +72,7 @@ Spirituality far above the 6% allocation after Blind Stupidity became a real upg
 
 ## Final (post-redesign) — 500,000 spins, seed 7, bet 20
 
-Config highlights: `payScale` **1.155**, Spirituality threshold **18**, Blind `transformCount` **1**, Grafting spreads only from natural Wilds, Sequence tiers **115 / 230 / 360 / 520 / 720 / 1000**, Tarot sim aligned with live.
+Config highlights: see `GAME_CONFIG` — Blind Stupidity upgrades **2–4** lows; Grafting morphs an orthogonal cluster into the **highest-paying** neighbor symbol; Sequence is permanent (base-game mult only).
 
 | Metric | Value |
 |---|---|

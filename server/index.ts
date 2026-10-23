@@ -1,5 +1,5 @@
 /**
- * Server-authoritative Pathways of the Sealed API.
+ * Server-authoritative Lord of the Mysteries — Sefirah Castle Sanctum API.
  * Uses the same engine/config as the client simulator.
  *
  * Start: `npm run server` (PORT default 8787)
@@ -276,6 +276,18 @@ const server = http.createServer(async (req, res) => {
             break;
           case 'setSequenceWins':
             g.debugSetSequenceWins(Number(body.wins));
+            break;
+          case 'setSequenceMultiplier':
+            g.debugSetSequenceMultiplier(Number(body.mult));
+            break;
+          case 'forceCreepingHunger':
+            g.debugForceCreepingHunger();
+            break;
+          case 'forceBonusMode':
+            g.debugForceBonusMode(body.mode as BonusModeId);
+            break;
+          case 'seedHistoricalVoid':
+            g.debugSeedHistoricalVoid();
             break;
           case 'clearForces':
             g.debugClearForces();

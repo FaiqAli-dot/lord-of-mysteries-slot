@@ -1,17 +1,22 @@
 import gsap from 'gsap';
 import { Graphics, Sprite, Text } from 'pixi.js';
-import type { SpiritualityEffectId, SymbolId } from '../../../config/gameConfig';
+import type { FeatureEffectId, SymbolId } from '../../../config/gameConfig';
 import { GAME_CONFIG } from '../../../config/gameConfig';
 import type { SpiritualityActivation } from '../../../engine/types';
 
-const SPECIALS = new Set<SymbolId>(['WILD', 'SCATTER', 'SPIRIT', 'SEQUENCE']);
+const SPECIALS = new Set<SymbolId>([
+  'WILD',
+  'SCATTER',
+  'SPIRIT',
+  'SEQUENCE',
+  'GLOVE',
+  'MONSTER',
+]);
 
-const EFFECT_LABEL: Record<SpiritualityEffectId, string> = {
-  GLOVE: 'GLOVE — Wild Transform',
-  GRAFTING: 'GRAFTING — Wild Spreads',
-  BLIND_STUPIDITY: 'BLIND STUPIDITY — High Upgrade',
-  CREEPING_HUNGER: 'CREEPING HUNGER — Respin',
-  LOCKED_WILD: 'LOCKED WILD — Sticky',
+const EFFECT_LABEL: Record<FeatureEffectId, string> = {
+  GRAFTING: 'GRAFTING — Highest Neighbor',
+  BLIND_STUPIDITY: 'BLIND STUPIDITY — 2–4 Lows → High',
+  CREEPING_HUNGER: 'CREEPING HUNGER — Absorb & Respin',
 };
 
 export function effectBannerText(act: SpiritualityActivation): string {

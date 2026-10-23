@@ -67,7 +67,7 @@ No simultaneous bonuses. Triggering bet is reused; bonus spins do not deduct wag
 
 **Fantasy:** Occult charge that occasionally “awakens” one effect.
 
-- Charge +1 on a paying spin (if Spirituality did not activate that spin) and +1 per Spirit Ember on the pre-effect grid.
+- Charge +1 on a **non-winning** spin (if Spirituality did not activate that spin) and +1 per Spirit Ember on the pre-effect grid.
 - Charges in base and bonus; meter is session-global.
 - When charge ≥ threshold at the start of resolution, **one** weighted effect activates, then charge → 0 (no overflow).
 - Activation modifies the grid **before** final evaluation. Incremental win vs the pre-effect grid is attributed to SPIRITUALITY.
@@ -76,11 +76,9 @@ No simultaneous bonuses. Triggering bet is reused; bonus spins do not deduct wag
 
 | Effect | Behavior | Protected cells |
 |--------|----------|-----------------|
-| **Grafting** | Natural Wild → spreads to orthogonal neighbors. No Wild → place one Wild, no spread. | Never overwrite Scatter / Sequence / Spirit |
-| **Blind Stupidity** | Upgrade **one** eligible cell to a random high | Never Scatter / Sequence / Spirit / Wild |
-| **Creeping Hunger** | One respin of non-preserved cells | Preserve highs, Wild, Scatter, Sequence, Spirit |
-| **Glove** | One eligible cell → Wild | Never Scatter / Sequence / Spirit / Wild |
-| **Locked Wild** | Place Wild for this spin + next, then expire (one entry per cell) | Never place over Scatter / Sequence / Spirit |
+| **Grafting** | Pick an anchor + orthogonal neighbors; transform the cluster into the **highest-paying** symbol among them (Wild ranks highest and never downgrades). | Never overwrite Scatter / Potion Bottle / Spirit / Glove / Monster |
+| **Blind Stupidity** | Randomly upgrade **2–4** low-paying cells into high-value artifacts | Never highs / Wild / Scatter / Potion / Spirit / Glove / Monster |
+| **Creeping Hunger** | Grid-triggered (Glove + Monster): absorb Monster → locking wilds, then respin non-preserved cells | Preserve highs, Wild, Scatter, Potion, Spirit, Glove |
 
 No recursive Spirituality activations on the same spin. Hunger does not chain.
 

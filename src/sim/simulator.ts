@@ -6,15 +6,20 @@ import { SeededRng, deriveSeed } from '../engine/rng';
 import { resolveSpin, emptyAttribution } from '../engine/pipeline';
 import {
   createBonusRuntime,
-  resolveTarotPick,
   tryRetrigger,
   advanceMoonMultiplier,
   advanceMiracleMultiplier,
   addStickyWildReel,
   addStickyWildCell,
+  drawTarotMultiplierCard,
+  captureTarotStickies,
+  applyMaxWinCap,
 } from '../engine/bonuses';
-import { resetSequence } from '../engine/sequence';
-import type { Attribution, LockedWildState } from '../engine/types';
+import type {
+  Attribution,
+  HistoricalVoidEntry,
+  LockedWildState,
+} from '../engine/types';
 
 export interface SimStats {
   spins: number;
@@ -26,8 +31,11 @@ export interface SimStats {
   categoryRtp: Record<keyof Attribution, number>;
   hitFrequency: number;
   losingSpinFrequency: number;
-  bonusTriggers: Record<BonusModeId, { count: number; totalPayout: number; avgPayout: number; frequency: number }>;
-  sequenceActivations: number; // spins where mult > 1 was applied
+  bonusTriggers: Record<
+    BonusModeId,
+    { count: number; totalPayout: number; avgPayout: number; frequency: number }
+  >;
+  sequenceActivations: number;
   sequenceMultHistogram: Record<number, number>;
   spiritualityActivations: number;
   spiritualityByEffect: Record<string, number>;
@@ -77,6 +85,7 @@ export function runSimulation(opts: {
   let sequenceMultiplier = 1;
   let spiritualityCharge = 0;
   let lockedWilds: LockedWildState[] = [];
+  let historicalVoid: HistoricalVoidEntry[] = [];
 
   const bonusTriggers: Record<
     BonusModeId,
@@ -97,25 +106,33 @@ export function runSimulation(opts: {
   const playBonus = (
     mode: BonusModeId,
     rngBaseSpin: number,
-  ): { payout: number; attribution: Attribution } => {
-    let bonus = createBonusRuntime(mode);
+  ): { payout: number; attribution: Attribution; spinsUsed: number } => {
+    let bonus = createBonusRuntime(mode, bet);
     let payout = 0;
     const a = emptyAttribution();
     let localSpin = rngBaseSpin;
+    let spinsUsed = 0;
 
-    // All bonuses use gathering/free spins via resolveSpin (matches SlotGame.bonusSpin).
-    // Tarot Club additionally draws one table reward after each reel result.
     while (bonus.spinsRemaining > 0) {
       bonus.spinsRemaining -= 1;
       bonus.spinsPlayed += 1;
       localSpin += 1;
+      spinsUsed += 1;
       const rng = new SeededRng(deriveSeed(seed, localSpin));
-      if (mode === 'CRIMSON_MOON') {
+
+      if (
+        mode === 'CRIMSON_MOON' &&
+        GAME_CONFIG.bonuses.crimsonMoon.stickyWildPerSpin
+      ) {
         if (GAME_CONFIG.bonuses.crimsonMoon.stickyMode === 'cell') {
           bonus = addStickyWildCell(bonus, rng);
         } else {
           bonus = addStickyWildReel(bonus, rng);
         }
+      }
+
+      if (mode === 'TAROT_CLUB') {
+        bonus = drawTarotMultiplierCard(rng, bonus);
       }
 
       const bonusMult =
@@ -124,8 +141,10 @@ export function runSimulation(opts: {
           : mode === 'FOOLS_MIRACLES'
             ? bonus.miracleMultiplier
             : mode === 'TAROT_CLUB'
-              ? Math.max(1, bonus.tarotRunningMultiplier)
+              ? Math.max(1, bonus.tarotCardMultiplier)
               : 1;
+
+      const room = Math.max(0, bonus.maxWinCredits - bonus.totalWon);
 
       const result = resolveSpin({
         rng,
@@ -142,20 +161,34 @@ export function runSimulation(opts: {
         allowWildExpansion: mode !== 'CRIMSON_MOON',
         stickyWildReels: bonus.stickyWildReels,
         stickyWildCells: bonus.stickyWildCells,
+        stickyTarotCells: bonus.stickyTarotCells,
         tarotWildEnhance: mode === 'TAROT_CLUB' && bonus.tarotWildEnhance,
         allowSpirituality: true,
         chargeInBonus: GAME_CONFIG.spirituality.chargeInBonus,
+        cascadeEnabled: mode === 'CRIMSON_MOON',
+        foolsThrone: mode === 'FOOLS_MIRACLES',
+        historicalVoid: mode === 'FOOLS_MIRACLES' ? historicalVoid : [],
+        maxWinRemaining: room,
       });
 
       sequenceWins = result.sequenceWinsAfter;
       sequenceMultiplier = result.sequenceMultiplierAfter;
       spiritualityCharge = result.spiritualityChargeAfter;
       lockedWilds = result.lockedWildsAfter;
-      payout += result.payout;
+
+      if (mode === 'TAROT_CLUB') {
+        bonus = captureTarotStickies(bonus, result.grid, rng);
+      }
+
+      const capped = applyMaxWinCap(bonus, result.payout);
+      bonus = capped.bonus;
+      const spinPay = capped.payout;
+      payout += spinPay;
       a.BASE += result.attribution.BASE;
       a.BONUS += result.attribution.BONUS;
       a.SEQUENCE += result.attribution.SEQUENCE;
       a.SPIRITUALITY += result.attribution.SPIRITUALITY;
+      bonus.totalWon += spinPay;
 
       if (result.spiritualityActivation) {
         spiritualityActivations += 1;
@@ -163,31 +196,18 @@ export function runSimulation(opts: {
         spiritualityByEffect[e] = (spiritualityByEffect[e] ?? 0) + 1;
       }
 
-      if (mode === 'TAROT_CLUB') {
-        const pick = resolveTarotPick(rng, bonus, bet);
-        bonus = pick.bonus;
-        if (pick.creditsAwarded > 0) {
-          payout += pick.creditsAwarded;
-          a.BONUS += pick.creditsAwarded;
-        }
-        if (bonus.tarotPicksRemaining > bonus.spinsRemaining) {
-          bonus.spinsRemaining = bonus.tarotPicksRemaining;
-        }
-      } else {
+      if (mode !== 'TAROT_CLUB') {
         bonus = tryRetrigger(bonus, result.scatterCount);
-        const hadPay = result.payout > 0;
-        if (mode === 'CRIMSON_MOON') bonus = advanceMoonMultiplier(bonus, hadPay);
-        if (mode === 'FOOLS_MIRACLES') bonus = advanceMiracleMultiplier(bonus, hadPay);
+        const hadPay = spinPay > 0;
+        if (mode === 'CRIMSON_MOON')
+          bonus = advanceMoonMultiplier(bonus, hadPay);
+        if (mode === 'FOOLS_MIRACLES')
+          bonus = advanceMiracleMultiplier(bonus, hadPay);
       }
-      bonus.totalWon += result.payout;
     }
 
-    // Reset sequence after bonus
-    const r = resetSequence();
-    sequenceWins = r.wins;
-    sequenceMultiplier = r.multiplier;
-
-    return { payout, attribution: a };
+    // Sequence is permanent — do not reset after bonus.
+    return { payout, attribution: a, spinsUsed };
   };
 
   for (let i = 0; i < spins; i++) {
@@ -218,6 +238,13 @@ export function runSimulation(opts: {
     spiritualityCharge = result.spiritualityChargeAfter;
     lockedWilds = result.lockedWildsAfter;
 
+    if (result.historicalVoidDelta?.length) {
+      historicalVoid = [
+        ...historicalVoid,
+        ...result.historicalVoidDelta,
+      ].slice(-GAME_CONFIG.historicalVoid.bufferSize);
+    }
+
     let roundReturn = result.payout;
     attr.BASE += result.attribution.BASE;
     attr.BONUS += result.attribution.BONUS;
@@ -234,10 +261,9 @@ export function runSimulation(opts: {
       spiritualityByEffect[e] = (spiritualityByEffect[e] ?? 0) + 1;
     }
 
-    // Auto-resolve bonus choice: alternate Tarot / Crimson for choice; Fools direct
     if (result.bonusTrigger === 'FOOLS_MIRACLES') {
       const b = playBonus('FOOLS_MIRACLES', spinIndex);
-      spinIndex += 50; // advance counter past bonus internal spins
+      spinIndex += Math.max(20, b.spinsUsed + 5);
       roundReturn += b.payout;
       attr.BASE += b.attribution.BASE;
       attr.BONUS += b.attribution.BONUS;
@@ -245,10 +271,20 @@ export function runSimulation(opts: {
       attr.SPIRITUALITY += b.attribution.SPIRITUALITY;
       bonusTriggers.FOOLS_MIRACLES.count += 1;
       bonusTriggers.FOOLS_MIRACLES.totalPayout += b.payout;
+    } else if (result.bonusTrigger === 'CRIMSON_MOON') {
+      const b = playBonus('CRIMSON_MOON', spinIndex);
+      spinIndex += Math.max(20, b.spinsUsed + 5);
+      roundReturn += b.payout;
+      attr.BASE += b.attribution.BASE;
+      attr.BONUS += b.attribution.BONUS;
+      attr.SEQUENCE += b.attribution.SEQUENCE;
+      attr.SPIRITUALITY += b.attribution.SPIRITUALITY;
+      bonusTriggers.CRIMSON_MOON.count += 1;
+      bonusTriggers.CRIMSON_MOON.totalPayout += b.payout;
     } else if (result.bonusTrigger === 'CHOICE') {
       const mode: BonusModeId = i % 2 === 0 ? 'TAROT_CLUB' : 'CRIMSON_MOON';
       const b = playBonus(mode, spinIndex);
-      spinIndex += 50;
+      spinIndex += Math.max(20, b.spinsUsed + 5);
       roundReturn += b.payout;
       attr.BASE += b.attribution.BASE;
       attr.BONUS += b.attribution.BONUS;
@@ -266,7 +302,6 @@ export function runSimulation(opts: {
   const rtp = totalWagered > 0 ? totalReturned / totalWagered : 0;
   const sorted = [...winMultiples].sort((a, b) => a - b);
   const sd = stddev(winMultiples);
-  // 95% CI for RTP via normal approx on mean win multiple
   const se = sd / Math.sqrt(spins);
   const ci: [number, number] = [rtp - 1.96 * se, rtp + 1.96 * se];
 
@@ -294,7 +329,10 @@ export function runSimulation(opts: {
     totalWagered,
     totalReturned,
     rtp,
-    rtpByCategory: { ...attr, total: attr.BASE + attr.BONUS + attr.SEQUENCE + attr.SPIRITUALITY },
+    rtpByCategory: {
+      ...attr,
+      total: attr.BASE + attr.BONUS + attr.SEQUENCE + attr.SPIRITUALITY,
+    },
     categoryRtp,
     hitFrequency: hits / spins,
     losingSpinFrequency: 1 - hits / spins,
@@ -317,27 +355,22 @@ export function runSimulation(opts: {
 }
 
 /**
- * Theoretical base-game RTP approximation via reel-strip enumeration
- * of stop positions (independent reels). Does not include Sequence,
- * Spirituality state, or bonus lifecycles — those require Monte Carlo.
+ * Theoretical base-game RTP approximation via dense Monte Carlo
+ * without Sequence / Spirituality / bonuses.
  */
-export function theoreticalBaseLineRtp(bet: number = GAME_CONFIG.defaultBet): {
+export function theoreticalBaseLineRtp(
+  bet: number = GAME_CONFIG.defaultBet,
+): {
   lineRtp: number;
   scatterRtp: number;
   combinedBaseApprox: number;
   totalCombos: number;
 } {
-  // Full 5-reel enumeration of strip stops is feasible if strips ~60: 60^5 = 777.6M — too heavy.
-  // Instead sample densely with a fixed seed for "theoretical Monte Carlo" of base-only
-  // (no sequence/spirit/bonus) OR enumerate with reduced approach.
-  // We provide an exact-per-line expected value sampling of 2M independent base spins
-  // without stateful features for analytics documentation.
   const samples = 2_000_000;
   const seed = 0x7e07e711;
   let returned = 0;
   let scatterReturned = 0;
   let lineReturned = 0;
-  // Use pipeline with sequence locked at 1x, no spirituality charge, no bonus
   for (let i = 0; i < samples; i++) {
     const rng = new SeededRng(deriveSeed(seed, i + 1));
     const result = resolveSpin({
@@ -357,7 +390,6 @@ export function theoreticalBaseLineRtp(bet: number = GAME_CONFIG.defaultBet): {
       allowSpirituality: false,
       chargeInBonus: false,
     });
-    // Attribute only BASE (no sequence/spirit)
     lineReturned += result.lineWins.reduce((s, w) => s + w.afterWildCredits, 0);
     scatterReturned += result.scatterWin?.baseCredits ?? 0;
     returned += result.attribution.BASE;

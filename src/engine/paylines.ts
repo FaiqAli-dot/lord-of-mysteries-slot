@@ -39,7 +39,15 @@ export function evaluateLine(
   let target: SymbolId | null = null;
   for (const c of cells) {
     const def = SYMBOLS[c.symbol];
-    if (def.isScatter || def.isSequenceMarker || def.isSpirit) break;
+    if (
+      def.isScatter ||
+      def.isSequenceMarker ||
+      def.isSpirit ||
+      def.isGlove ||
+      def.isMonster
+    ) {
+      break;
+    }
     if (isWild(c.symbol)) continue;
     if (def.tier === 'high' || def.tier === 'low') {
       target = c.symbol;
@@ -57,7 +65,15 @@ export function evaluateLine(
 
   for (const c of cells) {
     const def = SYMBOLS[c.symbol];
-    if (def.isScatter || def.isSequenceMarker || def.isSpirit) break;
+    if (
+      def.isScatter ||
+      def.isSequenceMarker ||
+      def.isSpirit ||
+      def.isGlove ||
+      def.isMonster
+    ) {
+      break;
+    }
     if (c.symbol === target || (isWild(c.symbol) && canSubstitute(c.symbol, target))) {
       count++;
       positions.push({ reel: c.reel, row: c.row });

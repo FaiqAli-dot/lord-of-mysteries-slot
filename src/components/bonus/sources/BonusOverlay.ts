@@ -78,7 +78,7 @@ export class BonusOverlay {
       this.el.style.pointerEvents = 'auto';
       this.el.innerHTML = `<div class="overlay-panel" role="dialog">
         <h2>Choose Your Path</h2>
-        <p>Select a bonus. Fool's Miracles (5+ scatters) is not listed here.</p>
+        <p>3 Crimson Tarot Cards — choose Mode A or Mode B. Fool's Miracles (5) and high-intensity Crimson Moon (4) enter automatically.</p>
         <div class="choices">
           ${choices
             .map((m) => {
@@ -124,7 +124,7 @@ export class BonusOverlay {
       const b = s.bonus;
       const last = b.tarotHistory[b.tarotHistory.length - 1];
       this.el.style.pointerEvents = 'none';
-      this.el.innerHTML = `<p class="status-chip tarot-chip">${GAME_CONFIG.bonuses.tarotClub.name}: ${b.spinsRemaining} left${last ? ` · ${last.label}` : ''} · ×${b.tarotRunningMultiplier}</p>`;
+      this.el.innerHTML = `<p class="status-chip tarot-chip">${GAME_CONFIG.bonuses.tarotClub.name}: ${b.spinsRemaining} left${last ? ` · ${last.label}` : ''} · card ×${b.tarotCardMultiplier}</p>`;
       return;
     }
 

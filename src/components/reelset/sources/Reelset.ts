@@ -31,8 +31,8 @@ import {
 const SYMBOL_PATH: Record<SymbolId, string> = {
   FOOL: 'symbols/high/hv_icon_r3c6_star.png',
   MAGICIAN: 'symbols/high/hv_icon_r1c2_staff.png',
-  PRIESTESS: 'symbols/high/hv_icon_r1c3_mirror.png',
-  WHEEL: 'symbols/high/hv_icon_r1c4_zodiac_disk.png',
+  PRIESTESS: 'symbols/high/hv_icon_r1c3_mirror.png', // Justice
+  WHEEL: 'symbols/high/hv_icon_r2c6_radiant_sun.png', // The Sun
   HANGED: 'symbols/high/hv_icon_r2c1_hanged_figure.png',
   WORLD: 'symbols/high/hv_icon_r2c2_armillary.png',
   ACE: 'symbols/low/low_ace.png',
@@ -40,9 +40,11 @@ const SYMBOL_PATH: Record<SymbolId, string> = {
   QUEEN: 'symbols/low/low_queen.png',
   JACK: 'symbols/low/low_jack_swirl.png',
   WILD: 'symbols/wild/wild_basic.png',
-  SCATTER: 'symbols/scatter/scatter_wax_seal.png',
-  SEQUENCE: 'symbols/feature/feature_sequence.png',
+  SCATTER: 'symbols/scatter/scatter_wax_seal.png', // Crimson Tarot Card
+  SEQUENCE: 'symbols/feature/feature_sequence.png', // Potion Bottle
   SPIRIT: 'symbols/feature/feature_spirituality.png',
+  GLOVE: 'symbols/feature/feature_glove.png',
+  MONSTER: 'symbols/feature/feature_creeping_hunger.png',
 };
 
 function assetUrl(rel: string): string {
@@ -685,6 +687,13 @@ export class PixiStage {
     const L = LAYOUT[this.layoutKind].reel;
 
     if (opts.feature.effect === 'GRAFTING') {
+      const targetId =
+        typeof d.targetSymbol === 'string'
+          ? (d.targetSymbol as SymbolId)
+          : typeof d.symbol === 'string'
+            ? (d.symbol as SymbolId)
+            : 'WILD';
+      const tex = Texture.from(assetUrl(SYMBOL_PATH[targetId] ?? SYMBOL_PATH.WILD));
       const seed =
         d.seed && typeof (d.seed as { reel?: number }).reel === 'number'
           ? (d.seed as { reel: number; row: number })
@@ -692,22 +701,21 @@ export class PixiStage {
               reel: typeof d.reel === 'number' ? d.reel : 0,
               row: typeof d.row === 'number' ? d.row : 0,
             };
-      // 1) One Wild on the seed (if we placed it, or highlight natural wild)
       const seedCell = this.cells[seed.reel]?.[seed.row];
       if (seedCell) {
-        seedCell.texture = Texture.from(assetUrl(SYMBOL_PATH.WILD));
+        seedCell.texture = tex;
         this.fitCell(seedCell, L.cellW * L.scale * 0.9, L.cellH * L.scale * 0.9);
         await flashCell(seedCell, 0xffe08a, this.reducedMotion);
       }
       await new Promise((r) => window.setTimeout(r, this.reducedMotion ? 120 : 280));
-      // 2) Neighbors convert to Wild (not the whole board at once)
+      // Neighbors morph into the highest-paying cluster symbol
       const neighbors = Array.isArray(d.positions)
         ? (d.positions as { reel: number; row: number }[])
         : [];
       for (const p of neighbors) {
         const cell = this.cells[p.reel]?.[p.row];
         if (!cell) continue;
-        cell.texture = Texture.from(assetUrl(SYMBOL_PATH.WILD));
+        cell.texture = tex;
         this.fitCell(cell, L.cellW * L.scale * 0.9, L.cellH * L.scale * 0.9);
         await flashCell(cell, 0xb48cff, this.reducedMotion);
       }
@@ -783,20 +791,6 @@ export class PixiStage {
               if (cell) await flashCell(cell, 0xffd078, this.reducedMotion);
             }
           }
-          break;
-        }
-        case 'GLOVE': {
-          const reel = typeof d.reel === 'number' ? d.reel : 0;
-          const row = typeof d.row === 'number' ? d.row : 0;
-          const cell = this.cells[reel]?.[row];
-          if (cell) await flashCell(cell, 0xffe08a, this.reducedMotion);
-          break;
-        }
-        case 'LOCKED_WILD': {
-          const reel = typeof d.reel === 'number' ? d.reel : 0;
-          const row = typeof d.row === 'number' ? d.row : 0;
-          const cell = this.cells[reel]?.[row];
-          if (cell) await flashCell(cell, 0xc4a35a, this.reducedMotion);
           break;
         }
         case 'GRAFTING': {
